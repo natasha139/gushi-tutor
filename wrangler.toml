@@ -1,0 +1,8 @@
+name = "gushi-tutor-api"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "gushi-tutor-db"
+database_id = "371abd4b-eaed-4c21-9e7f-74a5a5a39950"

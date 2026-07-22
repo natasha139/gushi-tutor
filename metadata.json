@@ -1,0 +1,6 @@
+{
+  "name": "小学古诗词学习助手",
+  "description": "专为小学生设计的古诗词学习与背诵复习平台，支持自定义诗歌内容、字音高亮、逐句精读与渐进式背诵挑战，并内置艾宾浩斯记忆曲线复习提醒。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
