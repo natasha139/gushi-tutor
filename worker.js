@@ -8,6 +8,22 @@ function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: CORS_HEADERS });
 }
 
+const ALLOWED_VIDEO_HOSTS = ['player.bilibili.com', 'www.youtube.com'];
+
+// Only accept https embed URLs from an allowlisted host; otherwise drop the value
+function sanitizeVideoUrl(videoUrl) {
+  if (!videoUrl) return '';
+  try {
+    const parsed = new URL(videoUrl);
+    if (parsed.protocol === 'https:' && ALLOWED_VIDEO_HOSTS.includes(parsed.hostname)) {
+      return videoUrl;
+    }
+  } catch (e) {
+    // fall through to reject
+  }
+  return '';
+}
+
 function rowToPoem(row) {
   return {
     ...row,
@@ -99,7 +115,7 @@ export default {
             empathy || '',
             JSON.stringify(words_json || []),
             audio_url || '',
-            video_url || '',
+            sanitizeVideoUrl(video_url),
             now
           )
           .run();
@@ -129,10 +145,23 @@ export default {
           if (!existing) return json({ error: 'Poem not found' }, 404);
 
           const body = await request.json();
-          const merged = { ...rowToPoem(existing), ...body };
+          // Only content fields are client-editable; progression state stays server-owned (via /review)
+          const { title, author, raw_text, sentences_json, background, empathy, words_json, audio_url, video_url } = body;
+          const current = rowToPoem(existing);
+          const merged = {
+            title: title !== undefined ? title : current.title,
+            author: author !== undefined ? author : current.author,
+            raw_text: raw_text !== undefined ? raw_text : current.raw_text,
+            sentences_json: sentences_json !== undefined ? sentences_json : current.sentences_json,
+            background: background !== undefined ? background : current.background,
+            empathy: empathy !== undefined ? empathy : current.empathy,
+            words_json: words_json !== undefined ? words_json : current.words_json,
+            audio_url: audio_url !== undefined ? audio_url : current.audio_url,
+            video_url: video_url !== undefined ? video_url : current.video_url,
+          };
 
           await env.DB.prepare(
-            `UPDATE poems SET title = ?, author = ?, raw_text = ?, sentences_json = ?, background = ?, empathy = ?, words_json = ?, audio_url = ?, video_url = ?, mastered = ?, review_stage = ?, last_review = ? WHERE id = ?`
+            `UPDATE poems SET title = ?, author = ?, raw_text = ?, sentences_json = ?, background = ?, empathy = ?, words_json = ?, audio_url = ?, video_url = ? WHERE id = ?`
           )
             .bind(
               merged.title,
@@ -143,10 +172,7 @@ export default {
               merged.empathy || '',
               JSON.stringify(merged.words_json || []),
               merged.audio_url || '',
-              merged.video_url || '',
-              merged.mastered ? 1 : 0,
-              merged.review_stage,
-              merged.last_review,
+              sanitizeVideoUrl(merged.video_url),
               id
             )
             .run();

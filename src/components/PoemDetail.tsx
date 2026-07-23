@@ -314,6 +314,7 @@ export default function PoemDetail({
                       allowfullscreen="true"
                       referrerpolicy="no-referrer"
                       loading="lazy"
+                      sandbox="allow-scripts allow-presentation"
                       className="absolute top-0 left-0 w-full h-full"
                     />
                   </div>
