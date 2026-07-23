@@ -143,21 +143,21 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F5F5F0] text-[#2C2C2C] pb-12 flex flex-col font-sans">
       {/* Dynamic Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E5E5DF] py-4 px-4 md:px-8 shadow-sm">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b-4 border-[#E5E5DF] py-5 px-4 md:px-8 shadow-sm">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           {/* Logo & Slogan */}
           <div
             onClick={() => setView({ name: "list" })}
             className="flex items-center gap-3 cursor-pointer group"
           >
-            <div className="w-10 h-10 rounded-full bg-[#5A5A40] flex items-center justify-center text-white font-serif italic text-xl shadow-sm group-hover:scale-105 transition-transform">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#5A5A40] to-[#3E3E2D] flex items-center justify-center text-white font-display text-3xl shadow-md group-hover:scale-105 transition-transform">
               诗
             </div>
             <div>
-              <h1 className="text-xl md:text-2xl font-bold font-serif text-[#5A5A40] tracking-wide">
+              <h1 className="text-2xl md:text-3xl font-black font-serif text-[#5A5A40] tracking-wide">
                 古诗伴读 · 乐学版
               </h1>
-              <p className="text-[10px] md:text-xs text-[#5A5A40]/85 font-medium font-serif">
+              <p className="text-xs md:text-sm text-[#5A5A40]/85 font-bold font-serif">
                 书山有路勤为径 · 艾宾浩斯智能记忆
               </p>
             </div>
@@ -168,13 +168,13 @@ export default function App() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               {/* Search input */}
               <div className="relative w-full sm:w-64">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" />
                 <input
                   type="text"
                   placeholder="搜索题目、作者、诗歌原文..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-stone-50 border border-[#E5E5DF] rounded-xl text-xs focus:bg-white focus:border-[#5A5A40] outline-none transition-all"
+                  className="w-full pl-10 pr-4 py-3 bg-stone-50 border-2 border-[#E5E5DF] rounded-full text-sm focus:bg-white focus:border-[#5A5A40] outline-none transition-all"
                 />
               </div>
 
@@ -182,9 +182,9 @@ export default function App() {
               <button
                 onClick={() => setView({ name: "add" })}
                 id="btn-nav-add-poem"
-                className="flex items-center justify-center gap-1.5 px-4 py-2 bg-[#5A5A40] hover:bg-[#484833] active:bg-[#3a3a2a] text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
+                className="flex items-center justify-center gap-1.5 px-5 py-3 bg-[#5A5A40] hover:bg-[#484833] active:bg-[#3a3a2a] text-white text-sm font-black rounded-full shadow-md transition-all active:scale-95"
               >
-                添加古诗
+                ✏️ 添加古诗
               </button>
             </div>
           )}
@@ -201,8 +201,8 @@ export default function App() {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
-            <div className="w-10 h-10 border-4 border-[#5A5A40] border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-stone-500 text-sm">正在为小书童准备诗集，请稍等...</p>
+            <div className="text-5xl animate-bounce">📖</div>
+            <p className="text-stone-500 text-sm font-bold">正在为小书童准备诗集，请稍等...</p>
           </div>
         ) : (
           <div>
@@ -247,15 +247,15 @@ export default function App() {
       </main>
 
       {/* Aesthetic Footer */}
-      <footer className="border-t border-[#E5E5DF] mt-12 py-6 text-center text-xs text-stone-500">
+      <footer className="border-t-4 border-[#E5E5DF] mt-12 py-6 text-center text-xs text-stone-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-3">
-          <div>
+          <div className="font-bold">
             © 2026 小学古诗词学习助手. 专为小学生量身定制的诗歌背诵工具.
           </div>
           <div className="flex gap-4">
-            <span className="text-[#5A5A40] font-semibold">🌱 艾宾浩斯复习：科学背诵，永不遗忘</span>
+            <span className="text-[#5A5A40] font-bold">🌱 艾宾浩斯复习：科学背诵，永不遗忘</span>
             <span className="text-stone-400">|</span>
-            <span className="text-[#5A5A40] font-semibold">📖 无广告 · 纯净阅读</span>
+            <span className="text-[#5A5A40] font-bold">📖 无广告 · 纯净阅读</span>
           </div>
         </div>
       </footer>
