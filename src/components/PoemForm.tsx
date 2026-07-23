@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Poem, Sentence, Word } from "../types";
 import { ArrowLeft, Plus, Trash2, Split, Check, Sparkles, Upload, Camera } from "lucide-react";
+import { API_BASE } from "../apiConfig";
 
 declare global {
   interface Window {
@@ -40,6 +41,10 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
   // OCR state
   const [ocrProcessing, setOcrProcessing] = useState(false);
   const [ocrPreview, setOcrPreview] = useState<string | null>(null);
+
+  // AI context generation state
+  const [storyGenerating, setStoryGenerating] = useState(false);
+  const [empathyGenerating, setEmpathyGenerating] = useState(false);
 
   // Dynamic state for sentences and words
   const [sentences, setSentences] = useState<Sentence[]>([]);
@@ -157,6 +162,38 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
       console.error("OCR error:", err);
     } finally {
       setOcrProcessing(false);
+    }
+  };
+
+  // Call backend AI proxy to generate 背景故事 / 共情类比
+  const handleGenerateContext = async (type: "story" | "empathy") => {
+    if (!title.trim() || !rawText.trim()) {
+      alert("请先填写诗名和原文，再使用 AI 生成");
+      return;
+    }
+
+    const setLoading = type === "story" ? setStoryGenerating : setEmpathyGenerating;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/generate-context`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, author, rawText, type })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "AI 生成失败");
+      }
+      if (type === "story") {
+        setBackground(data.content);
+      } else {
+        setEmpathy(data.content);
+      }
+    } catch (err: any) {
+      alert(err.message || "AI 生成出错，请稍后重试");
+      console.error("AI generate-context error:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -354,7 +391,22 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
         {/* Ebbinghaus Empathy & Background */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#5A5A40]/5 p-5 rounded-2xl border border-[#E5E5DF]">
           <div className="space-y-2">
-            <label className="block text-sm font-semibold text-[#5A5A40]">背景故事</label>
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-semibold text-[#5A5A40]">背景故事</label>
+              <button
+                type="button"
+                onClick={() => handleGenerateContext("story")}
+                disabled={storyGenerating || !title.trim() || !rawText.trim()}
+                className={`flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-full transition-all shadow-sm ${
+                  storyGenerating || !title.trim() || !rawText.trim()
+                    ? "bg-stone-200 text-stone-400 cursor-not-allowed"
+                    : "bg-gradient-to-r from-amber-400 to-amber-500 text-amber-950 hover:from-amber-500 hover:to-amber-600 active:scale-95"
+                }`}
+              >
+                <Sparkles size={12} />
+                {storyGenerating ? "生成中..." : "AI生成"}
+              </button>
+            </div>
             <textarea
               rows={3}
               placeholder="给小学生讲这首诗是在什么背景下写的（用讲故事的口吻，更易懂哦）..."
@@ -365,10 +417,25 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-semibold text-[#5A5A40]">共情类比</label>
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-semibold text-[#5A5A40]">共情类比</label>
+              <button
+                type="button"
+                onClick={() => handleGenerateContext("empathy")}
+                disabled={empathyGenerating || !title.trim() || !rawText.trim()}
+                className={`flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-full transition-all shadow-sm ${
+                  empathyGenerating || !title.trim() || !rawText.trim()
+                    ? "bg-stone-200 text-stone-400 cursor-not-allowed"
+                    : "bg-gradient-to-r from-purple-400 to-purple-500 text-purple-950 hover:from-purple-500 hover:to-purple-600 active:scale-95"
+                }`}
+              >
+                <Sparkles size={12} />
+                {empathyGenerating ? "生成中..." : "AI生成"}
+              </button>
+            </div>
             <textarea
               rows={3}
-              placeholder="关联小朋友的日常生活。例如：‘像你去外地夏令营晚上想爸爸妈妈一样’..."
+              placeholder="关联小朋友的日常生活。例如：’像你去外地夏令营晚上想爸爸妈妈一样’..."
               value={empathy}
               onChange={(e) => setEmpathy(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl border border-[#E5E5DF] focus:border-[#5A5A40] outline-none transition-all text-sm bg-white"

@@ -215,6 +215,52 @@ export default {
         }
       }
 
+      // POST /api/generate-context — AI 生成背景故事 / 共情类比
+      if (path === '/api/generate-context' && method === 'POST') {
+        const body = await request.json();
+        const { title, author, rawText, type } = body;
+
+        if (!title || !rawText) {
+          return json({ error: '诗名和原文为必填项' }, 400);
+        }
+        if (type !== 'story' && type !== 'empathy') {
+          return json({ error: 'type 必须是 story 或 empathy' }, 400);
+        }
+
+        const apiKey = env.QWEN_API_KEY;
+        if (!apiKey) return json({ error: 'QWEN_API_KEY not configured' }, 500);
+
+        const systemPrompt = type === 'story'
+          ? '你是一位给小学生讲古诗的老师。请用讲故事的口吻，讲述这首诗的创作背景（诗人当时在哪里、发生了什么、心情如何），语言简单易懂，控制在80-120字，不要用书面化的术语，直接输出正文，不要加任何前缀说明。'
+          : '你是一位给小学生讲古诗的老师。请把这首诗的情感关联到小朋友熟悉的日常生活场景（比如夏令营、住校、想爸爸妈妈等），帮助他们体会诗人的心情，语言亲切自然，控制在60-100字，直接输出正文，不要加任何前缀说明。';
+
+        const aiRes = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'deepseek-v4-flash',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: `诗名：《${title}》\n作者：${author || '未知'}\n原文：\n${rawText}` },
+            ],
+            temperature: 0.7,
+            max_tokens: 300,
+          }),
+        });
+        const aiData = await aiRes.json();
+        if (!aiRes.ok) {
+          return json({ error: `AI API error ${aiRes.status}: ${aiData.error?.message || aiData.message || JSON.stringify(aiData)}` }, 502);
+        }
+        const content = aiData.choices?.[0]?.message?.content?.trim();
+        if (!content) {
+          return json({ error: 'AI 未返回内容' }, 502);
+        }
+        return json({ content });
+      }
+
       return json({ error: 'Not found' }, 404);
     } catch (error) {
       return json({ error: error.message || 'Internal Server Error' }, 500);
