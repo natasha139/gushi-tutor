@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Poem, Sentence, Word } from "../types";
-import { ArrowLeft, Plus, Trash2, Split, Check, Sparkles } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Split, Check, Sparkles, Upload, Camera } from "lucide-react";
+import { API_BASE } from "../apiConfig";
 
 interface PoemFormProps {
   poemId?: number;
@@ -17,6 +18,10 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
   const [empathy, setEmpathy] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
+
+  // OCR state
+  const [ocrProcessing, setOcrProcessing] = useState(false);
+  const [ocrPreview, setOcrPreview] = useState<string | null>(null);
 
   // Dynamic state for sentences and words
   const [sentences, setSentences] = useState<Sentence[]>([]);
@@ -66,6 +71,62 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
     });
 
     setSentences(newSentences);
+  };
+
+  // Handle OCR image upload
+  const handleOcrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      alert("请上传图片文件（JPG、PNG 等）");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("图片文件不能超过 5MB，请压缩后重试");
+      return;
+    }
+
+    setOcrProcessing(true);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setOcrPreview(ev.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Upload to OCR API
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await fetch(`${API_BASE}/api/ocr`, {
+        method: "POST",
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error("OCR 识别失败");
+      }
+
+      const result = await response.json();
+
+      // Auto-fill form fields
+      if (result.title) setTitle(result.title);
+      if (result.author) setAuthor(result.author);
+      if (result.text) setRawText(result.text);
+
+      alert("✅ OCR 识别成功！已自动填充诗名、作者和原文，请检查并修改。");
+    } catch (err: any) {
+      alert(err.message || "OCR 识别出错，请手动输入或重试");
+      console.error("OCR error:", err);
+    } finally {
+      setOcrProcessing(false);
+    }
   };
 
   // Sentences mutation helper
@@ -190,6 +251,55 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
               className="w-full px-4 py-2.5 rounded-xl border border-[#E5E5DF] focus:border-[#5A5A40] focus:ring-1 focus:ring-[#5A5A40] outline-none transition-all"
             />
           </div>
+        </div>
+
+        {/* OCR image upload */}
+        <div className="space-y-3 bg-gradient-to-br from-amber-50 to-[#5A5A40]/5 p-5 rounded-3xl border-2 border-dashed border-[#5A5A40]/30">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <label className="block text-sm font-bold text-[#5A5A40] flex items-center gap-1.5">
+                <Camera size={16} />
+                拍照 / 上传图片自动识别
+              </label>
+              <p className="text-stone-500 text-xs mt-0.5 font-semibold">
+                拍下课本或练习册上的古诗，自动识别诗名、作者和原文
+              </p>
+            </div>
+            <label
+              htmlFor="ocr-upload-input"
+              className={`flex items-center gap-2 px-5 py-3 rounded-full text-sm font-black shadow-md transition-all cursor-pointer active:scale-95 shrink-0 ${
+                ocrProcessing
+                  ? "bg-stone-300 text-stone-500 cursor-not-allowed"
+                  : "bg-[#5A5A40] text-white hover:bg-[#484833]"
+              }`}
+            >
+              <Upload size={18} />
+              {ocrProcessing ? "识别中..." : "上传图片"}
+            </label>
+            <input
+              id="ocr-upload-input"
+              type="file"
+              accept="image/*"
+              onChange={handleOcrUpload}
+              disabled={ocrProcessing}
+              className="hidden"
+            />
+          </div>
+
+          {ocrPreview && (
+            <div className="flex items-center gap-3">
+              <img
+                src={ocrPreview}
+                alt="上传预览"
+                className="h-24 rounded-xl border-2 border-[#E5E5DF] object-cover"
+              />
+              {ocrProcessing && (
+                <span className="text-sm text-[#5A5A40] font-bold animate-pulse">
+                  正在识别文字，请稍候...
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Raw text */}
