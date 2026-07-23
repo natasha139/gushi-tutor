@@ -1,7 +1,25 @@
 import React, { useState, useEffect } from "react";
 import { Poem, Sentence, Word } from "../types";
 import { ArrowLeft, Plus, Trash2, Split, Check, Sparkles, Upload, Camera } from "lucide-react";
-import { API_BASE } from "../apiConfig";
+
+declare global {
+  interface Window {
+    Tesseract?: any;
+  }
+}
+
+// Lazily load Tesseract.js from CDN (same pattern as Writing Archive project)
+function loadTesseract(): Promise<void> {
+  return window.Tesseract
+    ? Promise.resolve()
+    : new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error("Tesseract.js 加载失败"));
+        document.head.appendChild(script);
+      });
+}
 
 interface PoemFormProps {
   poemId?: number;
@@ -73,7 +91,7 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
     setSentences(newSentences);
   };
 
-  // Handle OCR image upload
+  // Handle OCR image upload with Tesseract.js (browser-based, no API needed)
   const handleOcrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -99,28 +117,41 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
     };
     reader.readAsDataURL(file);
 
-    // Upload to OCR API
     try {
-      const formData = new FormData();
-      formData.append("image", file);
+      // Load Tesseract.js library
+      await loadTesseract();
 
-      const response = await fetch(`${API_BASE}/api/ocr`, {
-        method: "POST",
-        body: formData
+      // Run OCR with Chinese simplified + English support
+      const result = await window.Tesseract.recognize(file, 'chi_sim+eng', {
+        logger: (m: any) => {
+          if (m.status === 'recognizing text') {
+            console.log(`OCR 进度: ${Math.round(m.progress * 100)}%`);
+          }
+        }
       });
 
-      if (!response.ok) {
-        throw new Error("OCR 识别失败");
+      const fullText = (result.data.text || '').trim();
+
+      if (!fullText) {
+        alert("没有识别到文字，请确保图片清晰或手动输入");
+        return;
       }
 
-      const result = await response.json();
+      // Parse poem structure: first line = title, second = author, rest = body
+      const lines = fullText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-      // Auto-fill form fields
-      if (result.title) setTitle(result.title);
-      if (result.author) setAuthor(result.author);
-      if (result.text) setRawText(result.text);
+      if (lines.length >= 3) {
+        setTitle(lines[0]);
+        setAuthor(lines[1]);
+        setRawText(lines.slice(2).join('\n'));
+      } else if (lines.length === 2) {
+        setTitle(lines[0]);
+        setRawText(lines[1]);
+      } else if (lines.length === 1) {
+        setRawText(lines[0]);
+      }
 
-      alert("✅ OCR 识别成功！已自动填充诗名、作者和原文，请检查并修改。");
+      alert("✅ OCR 识别完成！已自动填充内容，请检查并修改（中文识别可能有误差）。");
     } catch (err: any) {
       alert(err.message || "OCR 识别出错，请手动输入或重试");
       console.error("OCR error:", err);
