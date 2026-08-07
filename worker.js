@@ -9,6 +9,49 @@ function json(data, status = 200) {
 }
 
 const ALLOWED_VIDEO_HOSTS = ['player.bilibili.com', 'www.youtube.com'];
+const QWEN_MODELS = ['qwen3.7-max', 'qwen3.7-max-preview'];
+const DASHSCOPE_CHAT_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
+
+function getAiErrorMessage(data) {
+  return data?.error?.message || data?.message || '未知错误';
+}
+
+async function generateWithQwen(apiKey, messages) {
+  const failures = [];
+
+  for (const model of QWEN_MODELS) {
+    const response = await fetch(DASHSCOPE_CHAT_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: 0.7,
+        max_tokens: 300,
+      }),
+    });
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content?.trim();
+    if (response.ok && content) {
+      return { content, model };
+    }
+
+    failures.push({
+      model,
+      status: response.status,
+      message: response.ok ? '模型未返回内容' : getAiErrorMessage(data),
+    });
+
+    // Authentication failures apply to every model, so a fallback cannot help.
+    if (response.status === 401) break;
+  }
+
+  return { failures };
+}
 
 // Only accept https embed URLs from an allowlisted host; otherwise drop the value
 function sanitizeVideoUrl(videoUrl) {
@@ -234,31 +277,19 @@ export default {
           ? '你是一位给小学生讲古诗的老师。请用讲故事的口吻，讲述这首诗的创作背景（诗人当时在哪里、发生了什么、心情如何），语言简单易懂，控制在80-120字，不要用书面化的术语，直接输出正文，不要加任何前缀说明。'
           : '你是一位给小学生讲古诗的老师。请把这首诗的情感关联到小朋友熟悉的日常生活场景（比如夏令营、住校、想爸爸妈妈等），帮助他们体会诗人的心情，语言亲切自然，控制在60-100字，直接输出正文，不要加任何前缀说明。';
 
-        const aiRes = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model: 'deepseek-v4-flash',
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: `诗名：《${title}》\n作者：${author || '未知'}\n原文：\n${rawText}` },
-            ],
-            temperature: 0.7,
-            max_tokens: 300,
-          }),
-        });
-        const aiData = await aiRes.json();
-        if (!aiRes.ok) {
-          return json({ error: `AI API error ${aiRes.status}: ${aiData.error?.message || aiData.message || JSON.stringify(aiData)}` }, 502);
+        const aiResult = await generateWithQwen(apiKey, [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `诗名：《${title}》\n作者：${author || '未知'}\n原文：\n${rawText}` },
+        ]);
+
+        if (!aiResult.content) {
+          const details = aiResult.failures
+            .map(({ model, status, message }) => `${model} (${status}): ${message}`)
+            .join('；');
+          return json({ error: `两个千问模型均调用失败：${details}` }, 502);
         }
-        const content = aiData.choices?.[0]?.message?.content?.trim();
-        if (!content) {
-          return json({ error: 'AI 未返回内容' }, 502);
-        }
-        return json({ content });
+
+        return json({ content: aiResult.content, model: aiResult.model });
       }
 
       return json({ error: 'Not found' }, 404);
