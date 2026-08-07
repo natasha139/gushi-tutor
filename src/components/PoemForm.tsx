@@ -1,7 +1,32 @@
 import React, { useState, useEffect } from "react";
 import { Poem, Sentence, Word } from "../types";
-import { ArrowLeft, Plus, Trash2, Split, Check, Sparkles, Upload, Camera } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Split, Check, Sparkles, Upload, Camera, Search, Loader2, BookPlus } from "lucide-react";
 import { API_BASE } from "../apiConfig";
+
+const POETRY_SEARCH_API = "https://poetry.palemoky.com/api/search";
+
+interface PoetrySearchResult {
+  id: number;
+  title: string;
+  content: string[];
+  author: { id: number; name: string };
+  dynasty?: { id: number; name: string };
+  type?: { id: number; name: string };
+}
+
+function splitPoemText(text: string): Sentence[] {
+  return text
+    .split(/[，。？！；\n\r,?!;]/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => ({
+      text: part,
+      pinyin: "",
+      translation: "",
+      scene: "",
+      mood: ""
+    }));
+}
 
 declare global {
   interface Window {
@@ -38,6 +63,13 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
   const [audioUrl, setAudioUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
 
+  // Chinese Poetry API search state
+  const [poetryQuery, setPoetryQuery] = useState("");
+  const [poetryResults, setPoetryResults] = useState<PoetrySearchResult[]>([]);
+  const [poetrySearching, setPoetrySearching] = useState(false);
+  const [poetrySearchError, setPoetrySearchError] = useState("");
+  const [selectedPoetryId, setSelectedPoetryId] = useState<number | null>(null);
+
   // OCR state
   const [ocrProcessing, setOcrProcessing] = useState(false);
   const [ocrPreview, setOcrPreview] = useState<string | null>(null);
@@ -65,6 +97,67 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
     }
   }, [existingPoem]);
 
+  const handlePoetrySearch = async () => {
+    const query = poetryQuery.trim();
+    if (!query) {
+      setPoetrySearchError("请输入诗名、作者或诗句");
+      return;
+    }
+
+    setPoetrySearching(true);
+    setPoetrySearchError("");
+    setPoetryResults([]);
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15000);
+
+    try {
+      const params = new URLSearchParams({
+        q: query,
+        page: "1",
+        pageSize: "8",
+        lang: "zh-Hans"
+      });
+      const response = await fetch(`${POETRY_SEARCH_API}?${params}`, {
+        signal: controller.signal
+      });
+
+      if (response.status === 429) {
+        throw new Error("搜索次数较多，请一分钟后再试");
+      }
+      if (!response.ok) {
+        throw new Error("诗词库暂时无法搜索，请稍后重试");
+      }
+
+      const payload = await response.json();
+      const results = Array.isArray(payload.data) ? payload.data : [];
+      setPoetryResults(results);
+      if (results.length === 0) {
+        setPoetrySearchError("没有找到相关诗词，可以换个关键词或继续手动填写");
+      }
+    } catch (error: any) {
+      setPoetrySearchError(
+        error?.name === "AbortError"
+          ? "诗词库响应超时，请稍后重试或继续手动填写"
+          : error?.message || "搜索失败，请稍后重试"
+      );
+    } finally {
+      window.clearTimeout(timeout);
+      setPoetrySearching(false);
+    }
+  };
+
+  const handleSelectPoetry = (poem: PoetrySearchResult) => {
+    const poemText = poem.content.filter(Boolean).join("\n");
+    setTitle(poem.title);
+    setAuthor(poem.author?.name || "佚名");
+    setRawText(poemText);
+    setSentences(splitPoemText(poemText));
+    setSelectedPoetryId(poem.id);
+    setPoetryResults([]);
+    setPoetrySearchError("");
+  };
+
   // Handle auto-splitting by punctuation
   const handleAutoSplit = () => {
     if (!rawText.trim()) {
@@ -73,10 +166,7 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
     }
 
     // Split by common Chinese/English punctuation and newlines
-    const parts = rawText
-      .split(/[，。？！；\n\r,?!;]/)
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
+    const parts = splitPoemText(rawText).map((sentence) => sentence.text);
 
     // Merge or preserve existing annotated sentences if the text matches
     const newSentences = parts.map((part) => {
@@ -290,6 +380,94 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {!poemId && (
+          <div className="space-y-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-5">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-amber-100 p-2 text-amber-800">
+                <BookPlus size={20} />
+              </div>
+              <div>
+                <h3 className="font-bold text-stone-800">从诗词库一键导入</h3>
+                <p className="mt-0.5 text-xs leading-relaxed text-stone-500">
+                  搜索诗名、作者或诗句，选择后自动填入标题、作者、原文并完成拆句。
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="relative flex-1">
+                <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                <input
+                  type="search"
+                  value={poetryQuery}
+                  onChange={(event) => setPoetryQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      handlePoetrySearch();
+                    }
+                  }}
+                  placeholder="例如：静夜思、李白、床前明月光"
+                  className="w-full rounded-xl border border-amber-200 bg-white py-3 pl-10 pr-4 text-sm outline-none transition-all focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handlePoetrySearch}
+                disabled={poetrySearching || !poetryQuery.trim()}
+                className="flex items-center justify-center gap-2 rounded-xl bg-[#5A5A40] px-5 py-3 text-sm font-bold text-white transition-all hover:bg-[#484833] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {poetrySearching ? <Loader2 size={17} className="animate-spin" /> : <Search size={17} />}
+                {poetrySearching ? "搜索中" : "搜索诗词"}
+              </button>
+            </div>
+
+            {poetrySearchError && (
+              <p className="rounded-lg bg-white/80 px-3 py-2 text-xs text-rose-600" role="alert">
+                {poetrySearchError}
+              </p>
+            )}
+
+            {selectedPoetryId !== null && poetryResults.length === 0 && (
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
+                <Check size={14} /> 已自动填入，请核对不同版本的用字后保存
+              </p>
+            )}
+
+            {poetryResults.length > 0 && (
+              <div className="max-h-80 space-y-2 overflow-y-auto rounded-xl border border-amber-200 bg-white p-2">
+                {poetryResults.map((poem) => (
+                  <button
+                    key={poem.id}
+                    type="button"
+                    onClick={() => handleSelectPoetry(poem)}
+                    className="w-full rounded-xl border border-transparent p-3 text-left transition-all hover:border-amber-200 hover:bg-amber-50"
+                  >
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <span className="font-bold text-stone-800">《{poem.title}》</span>
+                      <span className="text-xs text-stone-500">
+                        {poem.dynasty?.name ? `[${poem.dynasty.name}] ` : ""}{poem.author?.name || "佚名"}
+                      </span>
+                      {poem.type?.name && (
+                        <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] text-stone-500">
+                          {poem.type.name}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1.5 line-clamp-2 font-serif text-sm leading-relaxed text-stone-600">
+                      {poem.content.join(" ")}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <p className="text-[11px] text-stone-400">
+              数据来自开源 Chinese Poetry API；古诗存在不同版本，导入后仍可手动修改。
+            </p>
+          </div>
+        )}
+
         {/* Basic Meta */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
