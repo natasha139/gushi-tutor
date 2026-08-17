@@ -29,7 +29,17 @@ export default function App() {
         throw new Error("获取古诗列表失败");
       }
       const data = await response.json();
-      setPoems(data);
+      // Parse JSON string fields from worker that come as strings
+      const parsedPoems = data.map((poem: any) => ({
+        ...poem,
+        sentences_json: typeof poem.sentences_json === 'string'
+          ? JSON.parse(poem.sentences_json || '[]')
+          : poem.sentences_json || [],
+        words_json: typeof poem.words_json === 'string'
+          ? JSON.parse(poem.words_json || '[]')
+          : poem.words_json || []
+      }));
+      setPoems(parsedPoems);
       setError(null);
     } catch (err: any) {
       setError(err.message || "无法连接到服务器，请检查网络连接。");
