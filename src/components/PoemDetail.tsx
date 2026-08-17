@@ -1,11 +1,13 @@
 import React, { useState, useRef } from "react";
 import { Poem } from "../types";
-import { ArrowLeft, BookOpen, Brain, Play, Sparkles, MessageCircle, Volume2, Type, HelpCircle, CheckCircle, Info } from "lucide-react";
+import { ArrowLeft, BookOpen, Brain, Play, Sparkles, MessageCircle, Volume2, Type, HelpCircle, CheckCircle, Info, Loader2 } from "lucide-react";
+import { API_BASE } from "../apiConfig";
 
 interface PoemDetailProps {
   poem: Poem;
   onBack: () => void;
   onMarkMastered: (id: number) => void;
+  onPoemUpdated: () => void;
   fontSize: "normal" | "large" | "huge";
   setFontSize: (size: "normal" | "large" | "huge") => void;
 }
@@ -14,6 +16,7 @@ export default function PoemDetail({
   poem,
   onBack,
   onMarkMastered,
+  onPoemUpdated,
   fontSize,
   setFontSize
 }: PoemDetailProps) {
@@ -21,6 +24,7 @@ export default function PoemDetail({
   const [challengeStage, setChallengeStage] = useState<number>(0); // 0=正常, 1=遮前2字, 2=遮后半句, 3=仅首字, 4=全遮
   const audioRef = useRef<HTMLAudioElement>(null);
   const [audioPlaying, setAudioPlaying] = useState(false);
+  const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
 
   // Determine font size CSS class
   const getFontSizeClass = (element: "title" | "body" | "poem") => {
@@ -38,6 +42,62 @@ export default function PoemDetail({
     if (element === "title") return "text-xl md:text-2xl";
     if (element === "poem") return "text-lg md:text-xl leading-relaxed tracking-normal";
     return "text-base md:text-lg leading-relaxed";
+  };
+
+  // Call backend AI proxy to generate pinyin/translation/scene/mood for one sentence
+  const handleGenerateSentence = async (sentenceIndex: number) => {
+    if (!poem.sentences_json || !poem.sentences_json[sentenceIndex]) return;
+    const sentence = poem.sentences_json[sentenceIndex];
+    setGeneratingIndex(sentenceIndex);
+    try {
+      const res = await fetch(API_BASE + "/api/generate-sentence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          poemTitle: poem.title,
+          poemAuthor: poem.author,
+          sentenceText: sentence.text,
+          poemRawText: poem.raw_text
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "AI 生成失败");
+      }
+
+      // Update the sentence in the array
+      const updatedSentences = [...poem.sentences_json];
+      updatedSentences[sentenceIndex] = {
+        ...updatedSentences[sentenceIndex],
+        pinyin: data.pinyin,
+        translation: data.translation,
+        scene: data.scene,
+        mood: data.mood
+      };
+
+      // Save to database
+      const saveRes = await fetch(API_BASE + "/api/poems/" + poem.id, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...poem,
+          sentences_json: updatedSentences
+        })
+      });
+
+      if (!saveRes.ok) {
+        throw new Error("保存失败");
+      }
+
+      // Trigger parent refresh
+      onPoemUpdated();
+
+    } catch (err: any) {
+      alert(err.message || "AI 生成出错，请稍后重试");
+      console.error("AI generate sentence error:", err);
+    } finally {
+      setGeneratingIndex(null);
+    }
   };
 
   // Trigger audio playback for recitation/hinting
@@ -403,14 +463,37 @@ export default function PoemDetail({
 
                     {/* Sentence body */}
                     <div className="flex-1 space-y-4">
-                      {/* Main original text */}
-                      <div>
-                        <span className="text-xs font-bold text-[#5A5A40] block font-sans tracking-wide">
-                          [{sent.pinyin || "未配音标"}]
-                        </span>
-                        <h5 className="text-xl font-bold font-serif text-stone-950 mt-0.5">
-                          {sent.text}
-                        </h5>
+                      {/* Main original text with AI button */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <span className="text-xs font-bold text-[#5A5A40] block font-sans tracking-wide">
+                            [{sent.pinyin || "未配音标"}]
+                          </span>
+                          <h5 className="text-xl font-bold font-serif text-stone-950 mt-0.5">
+                            {sent.text}
+                          </h5>
+                        </div>
+
+                        {/* AI Generate Button - show if any field is missing */}
+                        {(!sent.translation || !sent.scene || !sent.mood || !sent.pinyin) && (
+                          <button
+                            onClick={() => handleGenerateSentence(idx)}
+                            disabled={generatingIndex === idx}
+                            className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-[#5A5A40]/10 hover:bg-[#5A5A40]/20 text-[#5A5A40] rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                          >
+                            {generatingIndex === idx ? (
+                              <>
+                                <Loader2 size={12} className="animate-spin" />
+                                生成中
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles size={12} />
+                                AI生成
+                              </>
+                            )}
+                          </button>
+                        )}
                       </div>
 
                       {/* Details row layout */}

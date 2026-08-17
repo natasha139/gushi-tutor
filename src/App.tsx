@@ -21,8 +21,8 @@ export default function App() {
   const [fontSize, setFontSize] = useState<"normal" | "large" | "huge">("normal");
 
   // Fetch all poems from Express API
-  const fetchPoems = async () => {
-    setLoading(true);
+  const fetchPoems = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const response = await fetch(`${API_BASE}/api/poems`);
       if (!response.ok) {
@@ -44,7 +44,7 @@ export default function App() {
     } catch (err: any) {
       setError(err.message || "无法连接到服务器，请检查网络连接。");
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -248,6 +248,7 @@ export default function App() {
                 poem={getStudyingPoem()!}
                 onBack={() => setView({ name: "list" })}
                 onMarkMastered={handleMarkMastered}
+                onPoemUpdated={() => fetchPoems(false)}
                 fontSize={fontSize}
                 setFontSize={setFontSize}
               />

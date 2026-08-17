@@ -292,6 +292,61 @@ export default {
         return json({ content: aiResult.content, model: aiResult.model });
       }
 
+      // POST /api/generate-sentence — AI 生成逐句讲解（拼音、译文、画面、心境）
+      if (path === '/api/generate-sentence' && method === 'POST') {
+        const body = await request.json();
+        const { poemTitle, poemAuthor, sentenceText, poemRawText } = body;
+
+        if (!poemTitle || !sentenceText) {
+          return json({ error: '诗名和句子文本为必填项' }, 400);
+        }
+
+        const apiKey = env.QWEN_API_KEY;
+        if (!apiKey) return json({ error: 'QWEN_API_KEY not configured' }, 500);
+
+        const systemPrompt = `你是一位给小学生讲古诗的老师。对于给定的诗句，请生成以下内容：
+1. 拼音（完整带声调的汉语拼音）
+2. 译文（白话文翻译，简单易懂，30-50字）
+3. 画面（描述诗句呈现的具体场景画面，让孩子脑海中能想象出来，40-60字）
+4. 心境（诗人/主人公此时的情感状态，用小学生能理解的词汇，15-30字）
+
+请严格按照以下JSON格式输出，不要添加任何其他文字：
+{"pinyin":"完整拼音","translation":"白话翻译","scene":"画面描述","mood":"心境描述"}`;
+
+        const userPrompt = `诗名：《${poemTitle}》
+作者：${poemAuthor || '未知'}
+全诗原文：
+${poemRawText}
+
+当前句子：${sentenceText}`;
+
+        const aiResult = await generateWithQwen(apiKey, [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ]);
+
+        if (!aiResult.content) {
+          const details = aiResult.failures
+            .map(({ model, status, message }) => `${model} (${status}): ${message}`)
+            .join('；');
+          return json({ error: `两个千问模型均调用失败：${details}` }, 502);
+        }
+
+        // Parse JSON response
+        try {
+          const parsed = JSON.parse(aiResult.content);
+          return json({
+            pinyin: parsed.pinyin || '',
+            translation: parsed.translation || '',
+            scene: parsed.scene || '',
+            mood: parsed.mood || '',
+            model: aiResult.model
+          });
+        } catch (parseErr) {
+          return json({ error: 'AI 返回格式错误，请重试', raw: aiResult.content }, 500);
+        }
+      }
+
       return json({ error: 'Not found' }, 404);
     } catch (error) {
       return json({ error: error.message || 'Internal Server Error' }, 500);
