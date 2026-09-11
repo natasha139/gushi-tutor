@@ -363,7 +363,7 @@ export default function PoemDetail({
                   <span className="w-1.5 h-4 bg-[#5A5A40] rounded"></span>
                   诗词动画视频讲解
                 </h4>
-                {poem.video_url ? (
+                {poem.video_url && /^https?:\/\//i.test(poem.video_url) ? (
                   <a
                     href={poem.video_url}
                     target="_blank"
@@ -373,6 +373,11 @@ export default function PoemDetail({
                     <Play size={28} className="group-hover:scale-110 transition-transform" />
                     <span className="font-bold text-lg">打开视频讲解</span>
                   </a>
+                ) : poem.video_url ? (
+                  <div className="aspect-video bg-red-50 rounded-xl border border-red-200 flex flex-col items-center justify-center text-center p-6 text-red-500">
+                    <Info size={32} className="text-red-300 mb-2" />
+                    <p className="text-xs">视频链接格式无效，仅支持 http:// 或 https:// 开头的链接</p>
+                  </div>
                 ) : (
                   <div className="aspect-video bg-stone-50 rounded-xl border border-dashed border-[#E5E5DF] flex flex-col items-center justify-center text-center p-6 text-stone-400">
                     <Info size={32} className="text-stone-300 mb-2" />
