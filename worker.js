@@ -8,7 +8,15 @@ function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: CORS_HEADERS });
 }
 
-const ALLOWED_VIDEO_HOSTS = ['player.bilibili.com', 'www.youtube.com'];
+const ALLOWED_VIDEO_HOSTS = [
+  'player.bilibili.com',
+  'www.bilibili.com',
+  'bilibili.com',
+  'search.bilibili.com',
+  'www.youtube.com',
+  'youtube.com',
+  'youtu.be'
+];
 const QWEN_MODELS = ['qwen3.7-max', 'qwen3.7-max-preview'];
 const DASHSCOPE_CHAT_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
 
