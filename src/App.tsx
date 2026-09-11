@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { Poem } from "./types";
 import PoemList from "./components/PoemList";
-import PoemForm from "./components/PoemForm";
-import PoemDetail from "./components/PoemDetail";
 import { BookOpen, Award, Search, HelpCircle, FileText, Sparkles } from "lucide-react";
 import { API_BASE } from "./apiConfig";
+
+// 懒加载大组件
+const PoemForm = lazy(() => import("./components/PoemForm"));
+const PoemDetail = lazy(() => import("./components/PoemDetail"));
 
 export default function App() {
   const [poems, setPoems] = useState<Poem[]>([]);
@@ -228,30 +230,36 @@ export default function App() {
             )}
 
             {view.name === "add" && (
-              <PoemForm
-                onSave={handleSavePoem}
-                onCancel={() => setView({ name: "list" })}
-              />
+              <Suspense fallback={<div className="text-center py-12 text-stone-500">加载中...</div>}>
+                <PoemForm
+                  onSave={handleSavePoem}
+                  onCancel={() => setView({ name: "list" })}
+                />
+              </Suspense>
             )}
 
             {view.name === "edit" && (
-              <PoemForm
-                poemId={view.id}
-                existingPoem={getEditingPoem()}
-                onSave={handleSavePoem}
-                onCancel={() => setView({ name: "list" })}
-              />
+              <Suspense fallback={<div className="text-center py-12 text-stone-500">加载中...</div>}>
+                <PoemForm
+                  poemId={view.id}
+                  existingPoem={getEditingPoem()}
+                  onSave={handleSavePoem}
+                  onCancel={() => setView({ name: "list" })}
+                />
+              </Suspense>
             )}
 
             {view.name === "learn" && getStudyingPoem() && (
-              <PoemDetail
-                poem={getStudyingPoem()!}
-                onBack={() => setView({ name: "list" })}
-                onMarkMastered={handleMarkMastered}
-                onPoemUpdated={() => fetchPoems(false)}
-                fontSize={fontSize}
-                setFontSize={setFontSize}
-              />
+              <Suspense fallback={<div className="text-center py-12 text-stone-500">加载中...</div>}>
+                <PoemDetail
+                  poem={getStudyingPoem()!}
+                  onBack={() => setView({ name: "list" })}
+                  onMarkMastered={handleMarkMastered}
+                  onPoemUpdated={() => fetchPoems(false)}
+                  fontSize={fontSize}
+                  setFontSize={setFontSize}
+                />
+              </Suspense>
             )}
           </div>
         )}

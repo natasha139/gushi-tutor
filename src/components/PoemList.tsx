@@ -20,6 +20,11 @@ export default function PoemList({
   onDeletePoem,
   fontSizeClass
 }: PoemListProps) {
+  // Filter and sort state
+  const [filterStatus, setFilterStatus] = React.useState<"all" | "unmastered" | "reviewing" | "mastered">("all");
+  const [sortOrder, setSortOrder] = React.useState<"newest" | "oldest">("newest");
+  const [viewMode, setViewMode] = React.useState<"card" | "list">("list");
+
   // Separate into due for review and others
   const duePoems = poems.filter((p) => p.isDue && p.mastered && p.review_stage < 4);
   const masteredPoems = poems.filter((p) => p.mastered && !p.isDue);
@@ -33,6 +38,29 @@ export default function PoemList({
 
   const masteredPercent = totalPoems > 0 ? Math.round((masteredCount / totalPoems) * 100) : 0;
   const fullyMasteredPercent = totalPoems > 0 ? Math.round((fullyMasteredCount / totalPoems) * 100) : 0;
+
+  // Apply filter and sort
+  const filteredAndSortedPoems = React.useMemo(() => {
+    let filtered = poems;
+
+    // Apply filter
+    if (filterStatus === "unmastered") {
+      filtered = poems.filter(p => !p.mastered);
+    } else if (filterStatus === "reviewing") {
+      filtered = poems.filter(p => p.mastered && p.review_stage < 4);
+    } else if (filterStatus === "mastered") {
+      filtered = poems.filter(p => p.mastered && p.review_stage >= 4);
+    }
+
+    // Apply sort
+    const sorted = [...filtered].sort((a, b) => {
+      const timeA = a.created_at || 0;
+      const timeB = b.created_at || 0;
+      return sortOrder === "newest" ? timeB - timeA : timeA - timeB;
+    });
+
+    return sorted;
+  }, [poems, filterStatus, sortOrder]);
 
   // Medals/Badges state & database
   const [selectedMedal, setSelectedMedal] = React.useState<any | null>(null);
@@ -645,15 +673,71 @@ export default function PoemList({
 
       {/* All Poems Tabs / Grid */}
       <div className="space-y-6">
-        <div className="border-b border-[#E5E5DF] pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h3 className="text-xl font-bold font-serif text-[#5A5A40] flex items-center gap-2">
-            <BookOpen size={22} className="text-[#5A5A40]" />
-            我的诗歌库（{poems.length}首）
-          </h3>
-          <div className="flex gap-2 text-xs">
-            <span className="px-2 py-1 rounded bg-[#E5E5DF]/50 text-stone-600 border border-[#E5E5DF]">未背会: {unmasteredPoems.length}</span>
-            <span className="px-2 py-1 rounded bg-blue-50 text-blue-700 border border-blue-100">复习中: {poems.filter(p => p.mastered && p.review_stage < 4).length}</span>
-            <span className="px-2 py-1 rounded bg-green-50 text-green-700 border border-green-100">彻底掌握: {poems.filter(p => p.review_stage >= 4).length}</span>
+        <div className="border-b border-[#E5E5DF] pb-4 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h3 className="text-xl font-bold font-serif text-[#5A5A40] flex items-center gap-2">
+              <BookOpen size={22} className="text-[#5A5A40]" />
+              我的诗歌库（{filteredAndSortedPoems.length}首）
+            </h3>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSortOrder(sortOrder === "newest" ? "oldest" : "newest")}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-[#5A5A40]/20 bg-white hover:bg-[#5A5A40]/5 text-[#5A5A40] transition-colors flex items-center gap-1.5"
+              >
+                <Calendar size={14} />
+                {sortOrder === "newest" ? "最新优先" : "最旧优先"}
+              </button>
+              <button
+                onClick={() => setViewMode(viewMode === "card" ? "list" : "card")}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-[#5A5A40]/20 bg-white hover:bg-[#5A5A40]/5 text-[#5A5A40] transition-colors"
+              >
+                {viewMode === "card" ? "列表视图" : "卡片视图"}
+              </button>
+            </div>
+          </div>
+
+          {/* Filter Tabs */}
+          <div className="flex gap-2 text-xs flex-wrap">
+            <button
+              onClick={() => setFilterStatus("all")}
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+                filterStatus === "all"
+                  ? "bg-[#5A5A40] text-white shadow-sm"
+                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+              }`}
+            >
+              全部 ({poems.length})
+            </button>
+            <button
+              onClick={() => setFilterStatus("unmastered")}
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+                filterStatus === "unmastered"
+                  ? "bg-stone-600 text-white shadow-sm"
+                  : "bg-[#E5E5DF]/50 text-stone-600 border border-[#E5E5DF] hover:bg-[#E5E5DF]"
+              }`}
+            >
+              未背会 ({unmasteredCount})
+            </button>
+            <button
+              onClick={() => setFilterStatus("reviewing")}
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+                filterStatus === "reviewing"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100"
+              }`}
+            >
+              复习中 ({reviewingCount})
+            </button>
+            <button
+              onClick={() => setFilterStatus("mastered")}
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+                filterStatus === "mastered"
+                  ? "bg-green-600 text-white shadow-sm"
+                  : "bg-green-50 text-green-700 border border-green-100 hover:bg-green-100"
+              }`}
+            >
+              彻底掌握 ({fullyMasteredCount})
+            </button>
           </div>
         </div>
 
@@ -669,9 +753,91 @@ export default function PoemList({
               添加新古诗
             </button>
           </div>
+        ) : viewMode === "list" ? (
+          <div className="bg-white border border-[#E5E5DF] rounded-xl divide-y divide-[#E5E5DF]">
+            {filteredAndSortedPoems.map((poem) => {
+              const isDue = poem.isDue && poem.mastered && poem.review_stage < 4;
+              const growthState = getGrowthState(poem);
+              return (
+                <div
+                  key={poem.id}
+                  className={`p-4 hover:bg-stone-50/50 transition-colors flex items-center justify-between gap-4 ${
+                    isDue ? "bg-rose-50/30" : ""
+                  }`}
+                >
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    {/* Growth emoji */}
+                    <div className="text-2xl flex-shrink-0">
+                      {growthState.emoji}
+                    </div>
+
+                    {/* Poem info */}
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-base font-bold text-stone-900 font-serif">
+                          《{poem.title}》
+                        </h4>
+                        <span className="text-xs text-stone-500 font-serif italic">[{poem.author}]</span>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${growthState.color}`}>
+                          {growthState.label}
+                        </span>
+                        {poem.mastered && poem.review_stage < 4 && (
+                          <span className="text-[10px] text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100">
+                            阶段 {poem.review_stage}/4
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-stone-600 line-clamp-1 font-serif">
+                        {poem.raw_text.replace(/\n/g, " ")}
+                      </p>
+                    </div>
+
+                    {/* Status and date */}
+                    <div className="hidden md:flex items-center gap-3 text-xs text-stone-500 flex-shrink-0">
+                      {poem.created_at && (
+                        <span className="flex items-center gap-1">
+                          <Calendar size={12} />
+                          {new Date(poem.created_at).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => poem.id && onEditPoem(poem.id)}
+                      title="编辑"
+                      className="p-2 hover:bg-stone-100 text-stone-600 hover:text-stone-900 rounded-lg transition-colors"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button
+                      onClick={() => poem.id && onDeletePoem(poem.id)}
+                      title="删除"
+                      className="p-2 hover:bg-rose-50 text-stone-600 hover:text-rose-600 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                    <button
+                      onClick={() => poem.id && onSelectPoem(poem.id)}
+                      className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        isDue
+                          ? "bg-rose-600 hover:bg-rose-700 text-white"
+                          : "bg-[#5A5A40] hover:bg-[#484833] text-white"
+                      }`}
+                    >
+                      {isDue ? "复习" : poem.mastered ? "巩固" : "学习"}
+                      <ChevronRight size={15} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {poems.map((poem) => {
+            {filteredAndSortedPoems.map((poem) => {
               const isDue = poem.isDue && poem.mastered && poem.review_stage < 4;
               return (
                 <div
