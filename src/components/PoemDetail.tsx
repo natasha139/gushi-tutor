@@ -357,34 +357,29 @@ export default function PoemDetail({
                 </div>
               </div>
 
-              {/* Video Embedding (16:9 ratio responsive scaling) */}
+              {/* Video Link Button */}
               <div className="space-y-3">
                 <h4 className="font-serif font-bold text-[#5A5A40] flex items-center gap-1.5">
                   <span className="w-1.5 h-4 bg-[#5A5A40] rounded"></span>
                   诗词动画视频讲解
                 </h4>
                 {poem.video_url ? (
-                  <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-[#E5E5DF] bg-stone-950 shadow-sm">
-                    <iframe
-                      src={poem.video_url}
-                      scrolling="no"
-                      border="0"
-                      frameborder="no"
-                      framespacing="0"
-                      allowfullscreen="true"
-                      referrerpolicy="no-referrer"
-                      loading="lazy"
-                      sandbox="allow-scripts allow-presentation"
-                      className="absolute top-0 left-0 w-full h-full"
-                    />
-                  </div>
+                  <a
+                    href={poem.video_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-3 w-full py-6 bg-gradient-to-br from-[#5A5A40] to-[#484833] hover:from-[#484833] hover:to-[#3a3a2a] text-white rounded-xl border border-[#E5E5DF] shadow-lg transition-all active:scale-95 group"
+                  >
+                    <Play size={28} className="group-hover:scale-110 transition-transform" />
+                    <span className="font-bold text-lg">打开视频讲解</span>
+                  </a>
                 ) : (
                   <div className="aspect-video bg-stone-50 rounded-xl border border-dashed border-[#E5E5DF] flex flex-col items-center justify-center text-center p-6 text-stone-400">
                     <Info size={32} className="text-stone-300 mb-2" />
-                    <p className="text-xs">暂无讲解视频。你可以点击编辑，添加B站/YouTube的 iframe 嵌入地址。</p>
+                    <p className="text-xs">暂无讲解视频。你可以点击编辑，添加视频链接。</p>
                   </div>
                 )}
-                <span className="text-xs text-stone-500 block text-right">支持 Bilibili / YouTube 动画直链</span>
+                <span className="text-xs text-stone-500 block text-right">支持任意 Bilibili / YouTube 视频链接</span>
               </div>
             </div>
           </div>

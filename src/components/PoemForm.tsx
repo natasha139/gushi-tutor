@@ -639,12 +639,12 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
 
           <div className="space-y-2">
             <div className="flex justify-between">
-              <label className="block text-sm font-semibold text-[#5A5A40]">视频 iframe 嵌入链接</label>
-              <span className="text-xs text-stone-500">B站/YouTube embed 链接</span>
+              <label className="block text-sm font-semibold text-[#5A5A40]">视频链接</label>
+              <span className="text-xs text-stone-500">任意B站/YouTube视频链接</span>
             </div>
             <input
               type="url"
-              placeholder="https://player.bilibili.com/player.html?bvid=xxx"
+              placeholder="https://www.bilibili.com/video/BVxxx 或 https://www.youtube.com/watch?v=xxx"
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl border border-[#E5E5DF] focus:border-[#5A5A40] outline-none bg-white transition-all text-xs"
