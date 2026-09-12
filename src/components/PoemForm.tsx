@@ -61,7 +61,38 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
   const [background, setBackground] = useState("");
   const [empathy, setEmpathy] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
-  const [videoUrl, setVideoUrl] = useState("");
+  const [videoUrls, setVideoUrls] = useState<string[]>([""]);
+
+  // Smart text parsing: detect "背景故事" and "共情类比" sections
+  const parseContextText = (text: string) => {
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+    let backgroundText = "";
+    let empathyText = "";
+    let currentSection = "";
+
+    for (const line of lines) {
+      if (line.includes("背景故事")) {
+        currentSection = "background";
+        continue;
+      }
+      if (line.includes("共情类比")) {
+        currentSection = "empathy";
+        continue;
+      }
+
+      if (currentSection === "background") {
+        backgroundText += (backgroundText ? "\n" : "") + line;
+      } else if (currentSection === "empathy") {
+        empathyText += (empathyText ? "\n" : "") + line;
+      }
+    }
+
+    if (backgroundText) setBackground(backgroundText);
+    if (empathyText) setEmpathy(empathyText);
+
+    return { backgroundText, empathyText };
+  };
 
   // Chinese Poetry API search state
   const [poetryQuery, setPoetryQuery] = useState("");
@@ -91,7 +122,7 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
       setBackground(existingPoem.background || "");
       setEmpathy(existingPoem.empathy || "");
       setAudioUrl(existingPoem.audio_url || "");
-      setVideoUrl(existingPoem.video_url || "");
+      setVideoUrls(existingPoem.video_urls && existingPoem.video_urls.length > 0 ? existingPoem.video_urls : [""]);
       setSentences(existingPoem.sentences_json || []);
       setWords(existingPoem.words_json || []);
     }
@@ -309,6 +340,23 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
     setWords(updated);
   };
 
+  // Video URLs mutation helpers
+  const handleAddVideoUrl = () => {
+    setVideoUrls([...videoUrls, ""]);
+  };
+
+  const handleRemoveVideoUrl = (index: number) => {
+    if (videoUrls.length > 1) {
+      setVideoUrls(videoUrls.filter((_, idx) => idx !== index));
+    }
+  };
+
+  const updateVideoUrl = (index: number, value: string) => {
+    const updated = [...videoUrls];
+    updated[index] = value;
+    setVideoUrls(updated);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -341,7 +389,7 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
           empathy,
           words_json: words,
           audio_url: audioUrl,
-          video_url: videoUrl
+          video_urls: videoUrls.filter(url => url.trim())
         });
         return;
       }
@@ -356,7 +404,7 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
       empathy,
       words_json: words,
       audio_url: audioUrl,
-      video_url: videoUrl
+      video_urls: videoUrls.filter(url => url.trim())
     });
   };
 
@@ -590,6 +638,13 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
               placeholder="给小学生讲这首诗是在什么背景下写的（用讲故事的口吻，更易懂哦）..."
               value={background}
               onChange={(e) => setBackground(e.target.value)}
+              onPaste={(e) => {
+                const pastedText = e.clipboardData.getData('text');
+                if (pastedText.includes("背景故事") || pastedText.includes("共情类比")) {
+                  e.preventDefault();
+                  parseContextText(pastedText);
+                }
+              }}
               className="w-full px-4 py-2.5 rounded-xl border border-[#E5E5DF] focus:border-[#5A5A40] outline-none transition-all text-sm bg-white"
             />
           </div>
@@ -616,13 +671,20 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
               placeholder="关联小朋友的日常生活。例如：’像你去外地夏令营晚上想爸爸妈妈一样’..."
               value={empathy}
               onChange={(e) => setEmpathy(e.target.value)}
+              onPaste={(e) => {
+                const pastedText = e.clipboardData.getData("text");
+                if (pastedText.includes("背景故事") || pastedText.includes("共情类比")) {
+                  e.preventDefault();
+                  parseContextText(pastedText);
+                }
+              }}
               className="w-full px-4 py-2.5 rounded-xl border border-[#E5E5DF] focus:border-[#5A5A40] outline-none transition-all text-sm bg-white"
             />
           </div>
         </div>
 
         {/* Audio / Video Links */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#5A5A40]/5 p-5 rounded-2xl border border-[#E5E5DF]">
+        <div className="space-y-4 bg-[#5A5A40]/5 p-5 rounded-2xl border border-[#E5E5DF]">
           <div className="space-y-2">
             <div className="flex justify-between">
               <label className="block text-sm font-semibold text-[#5A5A40]">音频直链 (MP3 MP4 etc)</label>
@@ -637,18 +699,41 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
             />
           </div>
 
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <label className="block text-sm font-semibold text-[#5A5A40]">视频链接</label>
-              <span className="text-xs text-stone-500">任意B站/YouTube视频链接</span>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <label className="block text-sm font-semibold text-[#5A5A40]">视频链接（可添加多个）</label>
+              <button
+                type="button"
+                onClick={handleAddVideoUrl}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-100 text-stone-800 border border-[#E5E5DF] font-semibold rounded-lg text-xs hover:bg-stone-200 transition-all"
+              >
+                <Plus size={14} />
+                添加视频
+              </button>
             </div>
-            <input
-              type="url"
-              placeholder="https://www.bilibili.com/video/BVxxx 或 https://www.youtube.com/watch?v=xxx"
-              value={videoUrl}
-              onChange={(e) => setVideoUrl(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-[#E5E5DF] focus:border-[#5A5A40] outline-none bg-white transition-all text-xs"
-            />
+            <p className="text-xs text-stone-500">支持B站/YouTube视频链接</p>
+
+            {videoUrls.map((url, index) => (
+              <div key={index} className="flex gap-2 items-center">
+                <input
+                  type="url"
+                  placeholder="https://www.bilibili.com/video/BVxxx 或 https://www.youtube.com/watch?v=xxx"
+                  value={url}
+                  onChange={(e) => updateVideoUrl(index, e.target.value)}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-[#E5E5DF] focus:border-[#5A5A40] outline-none bg-white transition-all text-xs"
+                />
+                {videoUrls.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveVideoUrl(index)}
+                    className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                    title="删除"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 

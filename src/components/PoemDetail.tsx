@@ -357,26 +357,33 @@ export default function PoemDetail({
                 </div>
               </div>
 
-              {/* Video Link Button */}
+              {/* Video Link Buttons */}
               <div className="space-y-3">
                 <h4 className="font-serif font-bold text-[#5A5A40] flex items-center gap-1.5">
                   <span className="w-1.5 h-4 bg-[#5A5A40] rounded"></span>
                   诗词动画视频讲解
                 </h4>
-                {poem.video_url && /^https?:\/\//i.test(poem.video_url) ? (
-                  <a
-                    href={poem.video_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-3 w-full py-6 bg-gradient-to-br from-[#5A5A40] to-[#484833] hover:from-[#484833] hover:to-[#3a3a2a] text-white rounded-xl border border-[#E5E5DF] shadow-lg transition-all active:scale-95 group"
-                  >
-                    <Play size={28} className="group-hover:scale-110 transition-transform" />
-                    <span className="font-bold text-lg">打开视频讲解</span>
-                  </a>
-                ) : poem.video_url ? (
-                  <div className="aspect-video bg-red-50 rounded-xl border border-red-200 flex flex-col items-center justify-center text-center p-6 text-red-500">
-                    <Info size={32} className="text-red-300 mb-2" />
-                    <p className="text-xs">视频链接格式无效，仅支持 http:// 或 https:// 开头的链接</p>
+                {poem.video_urls && poem.video_urls.length > 0 ? (
+                  <div className="space-y-2">
+                    {poem.video_urls.map((videoUrl, index) => (
+                      videoUrl && /^https?:\/\//i.test(videoUrl) ? (
+                        <a
+                          key={index}
+                          href={videoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-3 w-full py-4 bg-gradient-to-br from-[#5A5A40] to-[#484833] hover:from-[#484833] hover:to-[#3a3a2a] text-white rounded-xl border border-[#E5E5DF] shadow-lg transition-all active:scale-95 group"
+                        >
+                          <Play size={24} className="group-hover:scale-110 transition-transform" />
+                          <span className="font-bold text-base">视频讲解 {poem.video_urls.length > 1 ? `#${index + 1}` : ''}</span>
+                        </a>
+                      ) : videoUrl ? (
+                        <div key={index} className="bg-red-50 rounded-xl border border-red-200 flex flex-col items-center justify-center text-center p-4 text-red-500">
+                          <Info size={24} className="text-red-300 mb-1" />
+                          <p className="text-xs">视频 #{index + 1} 链接格式无效</p>
+                        </div>
+                      ) : null
+                    ))}
                   </div>
                 ) : (
                   <div className="aspect-video bg-stone-50 rounded-xl border border-dashed border-[#E5E5DF] flex flex-col items-center justify-center text-center p-6 text-stone-400">

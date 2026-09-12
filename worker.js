@@ -75,11 +75,17 @@ function sanitizeVideoUrl(videoUrl) {
   return '';
 }
 
+function sanitizeVideoUrls(videoUrls) {
+  if (!Array.isArray(videoUrls)) return [];
+  return videoUrls.map(sanitizeVideoUrl).filter(Boolean);
+}
+
 function rowToPoem(row) {
   return {
     ...row,
     sentences_json: row.sentences_json ? JSON.parse(row.sentences_json) : [],
     words_json: row.words_json ? JSON.parse(row.words_json) : [],
+    video_urls: row.video_urls ? JSON.parse(row.video_urls) : [],
     mastered: !!row.mastered,
   };
 }
@@ -110,7 +116,7 @@ CREATE TABLE poems (
   empathy TEXT,
   words_json TEXT,
   audio_url TEXT NOT NULL,
-  video_url TEXT NOT NULL,
+  video_urls TEXT NOT NULL,
   mastered BOOLEAN DEFAULT FALSE,
   review_stage INTEGER DEFAULT 0,
   last_review INTEGER,
@@ -146,7 +152,7 @@ export default {
       // POST /api/poems
       if (path === '/api/poems' && method === 'POST') {
         const body = await request.json();
-        const { title, author, raw_text, sentences_json, background, empathy, words_json, audio_url, video_url } = body;
+        const { title, author, raw_text, sentences_json, background, empathy, words_json, audio_url, video_urls } = body;
 
         if (!title || !author || !raw_text) {
           return json({ error: '诗名、作者、原文为必填项' }, 400);
@@ -154,7 +160,7 @@ export default {
 
         const now = Date.now();
         const result = await env.DB.prepare(
-          `INSERT INTO poems (title, author, raw_text, sentences_json, background, empathy, words_json, audio_url, video_url, mastered, review_stage, last_review, created_at)
+          `INSERT INTO poems (title, author, raw_text, sentences_json, background, empathy, words_json, audio_url, video_urls, mastered, review_stage, last_review, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, NULL, ?)`
         )
           .bind(
@@ -166,7 +172,7 @@ export default {
             empathy || '',
             JSON.stringify(words_json || []),
             audio_url || '',
-            sanitizeVideoUrl(video_url),
+            JSON.stringify(sanitizeVideoUrls(video_urls || [])),
             now
           )
           .run();
@@ -197,7 +203,7 @@ export default {
 
           const body = await request.json();
           // Only content fields are client-editable; progression state stays server-owned (via /review)
-          const { title, author, raw_text, sentences_json, background, empathy, words_json, audio_url, video_url } = body;
+          const { title, author, raw_text, sentences_json, background, empathy, words_json, audio_url, video_urls } = body;
           const current = rowToPoem(existing);
           const merged = {
             title: title !== undefined ? title : current.title,
@@ -208,11 +214,11 @@ export default {
             empathy: empathy !== undefined ? empathy : current.empathy,
             words_json: words_json !== undefined ? words_json : current.words_json,
             audio_url: audio_url !== undefined ? audio_url : current.audio_url,
-            video_url: video_url !== undefined ? video_url : current.video_url,
+            video_urls: video_urls !== undefined ? video_urls : current.video_urls,
           };
 
           await env.DB.prepare(
-            `UPDATE poems SET title = ?, author = ?, raw_text = ?, sentences_json = ?, background = ?, empathy = ?, words_json = ?, audio_url = ?, video_url = ? WHERE id = ?`
+            `UPDATE poems SET title = ?, author = ?, raw_text = ?, sentences_json = ?, background = ?, empathy = ?, words_json = ?, audio_url = ?, video_urls = ? WHERE id = ?`
           )
             .bind(
               merged.title,
@@ -223,7 +229,7 @@ export default {
               merged.empathy || '',
               JSON.stringify(merged.words_json || []),
               merged.audio_url || '',
-              sanitizeVideoUrl(merged.video_url),
+              JSON.stringify(sanitizeVideoUrls(merged.video_urls || [])),
               id
             )
             .run();

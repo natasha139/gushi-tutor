@@ -22,7 +22,7 @@ export interface Poem {
   empathy: string;
   words_json: Word[]; // We will parse/stringify this in the API Layer
   audio_url: string;
-  video_url: string;
+  video_urls: string[]; // Changed from video_url to support multiple videos
   mastered: boolean;
   review_stage: number; // 0=未背, 1=第2天, 2=第4天, 3=第7天
   last_review: number | null; // Timestamp
