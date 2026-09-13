@@ -24,6 +24,14 @@ function getAiErrorMessage(data) {
   return data?.error?.message || data?.message || '未知错误';
 }
 
+function parseAiJson(content) {
+  const cleaned = content
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/, '');
+  return JSON.parse(cleaned);
+}
+
 async function generateWithQwen(apiKey, messages) {
   const failures = [];
 
@@ -288,7 +296,7 @@ export default {
         if (!apiKey) return json({ error: 'QWEN_API_KEY not configured' }, 500);
 
         const systemPrompt = type === 'story'
-          ? '你是一位给小学生讲古诗的老师。请用讲故事的口吻，讲述这首诗的创作背景（诗人当时在哪里、发生了什么、心情如何），语言简单易懂，控制在80-120字，不要用书面化的术语，直接输出正文，不要加任何前缀说明。'
+          ? '你是一位给小学生讲古诗的老师。请用讲故事的口吻，严格按照事情发生的时间先后讲述这首诗的创作背景：先交代诗人当时在哪里和前因，再讲发生了什么，最后讲诗人的心情以及如何写下这首诗。语言简单易懂，控制在80-120字；史实不确定时不要编造具体日期或事件；直接输出正文，不要加任何前缀说明。'
           : '你是一位给小学生讲古诗的老师。请把这首诗的情感关联到小朋友熟悉的日常生活场景（比如夏令营、住校、想爸爸妈妈等），帮助他们体会诗人的心情，语言亲切自然，控制在60-100字，直接输出正文，不要加任何前缀说明。';
 
         const aiResult = await generateWithQwen(apiKey, [
@@ -348,7 +356,7 @@ ${poemRawText}
 
         // Parse JSON response
         try {
-          const parsed = JSON.parse(aiResult.content);
+          const parsed = parseAiJson(aiResult.content);
           return json({
             pinyin: parsed.pinyin || '',
             translation: parsed.translation || '',
@@ -356,6 +364,63 @@ ${poemRawText}
             mood: parsed.mood || '',
             model: aiResult.model
           });
+        } catch (parseErr) {
+          return json({ error: 'AI 返回格式错误，请重试', raw: aiResult.content }, 500);
+        }
+      }
+
+      // POST /api/generate-words — AI 按原文顺序提取生字词
+      if (path === '/api/generate-words' && method === 'POST') {
+        const body = await request.json();
+        const { title, author, rawText } = body;
+
+        if (!title || !rawText) {
+          return json({ error: '诗名和原文为必填项' }, 400);
+        }
+
+        const apiKey = env.QWEN_API_KEY;
+        if (!apiKey) return json({ error: 'QWEN_API_KEY not configured' }, 500);
+
+        const systemPrompt = `你是一位熟悉小学语文的古诗老师。请从原文中挑选3-8个小学生需要学习的生字、难字或古今义不同的词语，并给出带声调的拼音和在本诗语境中的简明释义。
+
+要求：
+1. 只能选择原文中实际出现的字或词；
+2. 严格按照它们在原文中第一次出现的先后顺序排列；
+3. 不要重复；释义要适合小学生，避免循环解释；
+4. 如果确实没有合适的生字词，可以返回空数组；
+5. 严格输出JSON，不要添加任何其他文字。
+
+输出格式：
+{"words":[{"word":"疑","pinyin":"yí","meaning":"好像，以为"}]}`;
+
+        const aiResult = await generateWithQwen(apiKey, [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `诗名：《${title}》\n作者：${author || '未知'}\n原文：\n${rawText}` },
+        ]);
+
+        if (!aiResult.content) {
+          const details = aiResult.failures
+            .map(({ model, status, message }) => `${model} (${status}): ${message}`)
+            .join('；');
+          return json({ error: `两个千问模型均调用失败：${details}` }, 502);
+        }
+
+        try {
+          const parsed = parseAiJson(aiResult.content);
+          const sourceWords = Array.isArray(parsed.words) ? parsed.words : [];
+          const seen = new Set();
+          const words = sourceWords
+            .filter((item) => item && typeof item.word === 'string' && rawText.includes(item.word))
+            .map((item) => ({
+              word: item.word.trim(),
+              pinyin: typeof item.pinyin === 'string' ? item.pinyin.trim() : '',
+              meaning: typeof item.meaning === 'string' ? item.meaning.trim() : '',
+            }))
+            .filter((item) => item.word && !seen.has(item.word) && seen.add(item.word))
+            .sort((a, b) => rawText.indexOf(a.word) - rawText.indexOf(b.word))
+            .slice(0, 8);
+
+          return json({ words, model: aiResult.model });
         } catch (parseErr) {
           return json({ error: 'AI 返回格式错误，请重试', raw: aiResult.content }, 500);
         }

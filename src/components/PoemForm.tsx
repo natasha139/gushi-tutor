@@ -108,6 +108,9 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
   // AI context generation state
   const [storyGenerating, setStoryGenerating] = useState(false);
   const [empathyGenerating, setEmpathyGenerating] = useState(false);
+  const [sentencesGenerating, setSentencesGenerating] = useState(false);
+  const [sentenceGenerationProgress, setSentenceGenerationProgress] = useState(0);
+  const [wordsGenerating, setWordsGenerating] = useState(false);
 
   // Dynamic state for sentences and words
   const [sentences, setSentences] = useState<Sentence[]>([]);
@@ -215,6 +218,65 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
     });
 
     setSentences(newSentences);
+  };
+
+  // Split first when needed, then ask AI to explain every sentence in poem order.
+  const handleGenerateSentences = async () => {
+    if (!title.trim() || !rawText.trim()) {
+      alert("请先填写诗名和原文，再使用 AI 逐句讲解");
+      return;
+    }
+
+    const baseSentences = splitPoemText(rawText).map((sentence) => {
+      const existing = sentences.find((item) => item.text === sentence.text);
+      return existing || sentence;
+    });
+
+    if (baseSentences.length === 0) {
+      alert("没有识别到可讲解的诗句，请检查原文");
+      return;
+    }
+
+    setSentences(baseSentences);
+    setSentencesGenerating(true);
+    setSentenceGenerationProgress(0);
+
+    const generated = [...baseSentences];
+    try {
+      // Generate sequentially to keep the result order stable and avoid API bursts.
+      for (let index = 0; index < baseSentences.length; index += 1) {
+        const res = await fetch(`${API_BASE}/api/generate-sentence`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            poemTitle: title,
+            poemAuthor: author,
+            poemRawText: rawText,
+            sentenceText: baseSentences[index].text
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || `第 ${index + 1} 句 AI 生成失败`);
+        }
+
+        generated[index] = {
+          ...generated[index],
+          pinyin: data.pinyin || "",
+          translation: data.translation || "",
+          scene: data.scene || "",
+          mood: data.mood || ""
+        };
+        setSentences([...generated]);
+        setSentenceGenerationProgress(index + 1);
+      }
+    } catch (err: any) {
+      setSentences([...generated]);
+      alert(err.message || "AI 逐句讲解生成出错，请稍后重试");
+      console.error("AI generate sentences error:", err);
+    } finally {
+      setSentencesGenerating(false);
+    }
   };
 
   // Handle OCR image upload with Tesseract.js (browser-based, no API needed)
@@ -338,6 +400,32 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
     const updated = [...words];
     updated[index] = { ...updated[index], [field]: value };
     setWords(updated);
+  };
+
+  const handleGenerateWords = async () => {
+    if (!title.trim() || !rawText.trim()) {
+      alert("请先填写诗名和原文，再使用 AI 提取生字词");
+      return;
+    }
+
+    setWordsGenerating(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/generate-words`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, author, rawText })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "AI 提取生字词失败");
+      }
+      setWords(Array.isArray(data.words) ? data.words : []);
+    } catch (err: any) {
+      alert(err.message || "AI 提取生字词出错，请稍后重试");
+      console.error("AI generate words error:", err);
+    } finally {
+      setWordsGenerating(false);
+    }
   };
 
   // Video URLs mutation helpers
@@ -745,18 +833,33 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
                 逐句详细讲解（小学生专属）
               </h3>
               <p className="text-stone-500 text-xs mt-0.5">
-                先点击右侧“自动拆句”，即可在下方快速编辑每一句的拼音、翻译和画面。
+                可以手动拆句编辑，也可以让 AI 按原文顺序生成每一句的拼音、翻译、画面和心情。
               </p>
             </div>
-            <button
-              type="button"
-              onClick={handleAutoSplit}
-              id="btn-auto-split"
-              className="flex items-center gap-1.5 px-4 py-2 bg-[#5A5A40]/10 text-[#5A5A40] border border-[#5A5A40]/20 font-semibold rounded-lg text-xs hover:bg-[#5A5A40]/25 transition-all self-start"
-            >
-              <Split size={14} />
-              自动分析并拆分句子
-            </button>
+            <div className="flex flex-wrap gap-2 self-start">
+              <button
+                type="button"
+                onClick={handleAutoSplit}
+                id="btn-auto-split"
+                disabled={sentencesGenerating}
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#5A5A40]/10 text-[#5A5A40] border border-[#5A5A40]/20 font-semibold rounded-lg text-xs hover:bg-[#5A5A40]/25 transition-all disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Split size={14} />
+                自动分析并拆分句子
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerateSentences}
+                id="btn-ai-generate-sentences"
+                disabled={sentencesGenerating || !title.trim() || !rawText.trim()}
+                className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-500 text-amber-950 font-bold rounded-lg text-xs shadow-sm hover:from-amber-500 hover:to-amber-600 transition-all disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {sentencesGenerating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                {sentencesGenerating
+                  ? `AI 生成中 ${sentenceGenerationProgress}/${sentences.length}`
+                  : "AI生成全部讲解"}
+              </button>
+            </div>
           </div>
 
           {sentences.length === 0 ? (
@@ -829,7 +932,7 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
 
         {/* Vocabulary words list */}
         <div className="space-y-4 border-t border-stone-100 pt-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-lg font-bold font-serif text-[#5A5A40] flex items-center gap-2">
                 生字词释义卡片
@@ -838,20 +941,33 @@ export default function PoemForm({ poemId, onSave, onCancel, existingPoem }: Poe
                 添加古诗中的难字、生字，帮助小学生夯实语文基础。
               </p>
             </div>
-            <button
-              type="button"
-              onClick={handleAddWord}
-              id="btn-add-word"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-100 text-stone-800 border border-[#E5E5DF] font-semibold rounded-lg text-xs hover:bg-stone-200 transition-all"
-            >
-              <Plus size={14} />
-              添加生词行
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleGenerateWords}
+                id="btn-ai-generate-words"
+                disabled={wordsGenerating || !title.trim() || !rawText.trim()}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-400 to-purple-500 text-purple-950 font-bold rounded-lg text-xs shadow-sm hover:from-purple-500 hover:to-purple-600 transition-all disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {wordsGenerating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                {wordsGenerating ? "AI 提取中..." : "AI提取生字词"}
+              </button>
+              <button
+                type="button"
+                onClick={handleAddWord}
+                id="btn-add-word"
+                disabled={wordsGenerating}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-100 text-stone-800 border border-[#E5E5DF] font-semibold rounded-lg text-xs hover:bg-stone-200 transition-all disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Plus size={14} />
+                手动添加一行
+              </button>
+            </div>
           </div>
 
           {words.length === 0 ? (
             <div className="text-center py-6 bg-stone-50 rounded-xl border border-dashed border-[#E5E5DF] text-stone-400 text-xs">
-              无生字词。点击上方“添加生词行”可以高亮和讲解。
+              暂无生字词。可以让 AI 按原文顺序提取，也可以手动添加。
             </div>
           ) : (
             <div className="space-y-3">
