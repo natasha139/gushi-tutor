@@ -17,7 +17,7 @@ const ALLOWED_VIDEO_HOSTS = [
   'youtube.com',
   'youtu.be'
 ];
-const QWEN_MODELS = ['qwen3.7-max', 'qwen3.7-max-preview'];
+const DASHSCOPE_MODELS = ['kimi-k2.7-code', 'qwen3.7-max', 'qwen3.7-max-preview'];
 const DASHSCOPE_CHAT_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
 
 function getAiErrorMessage(data) {
@@ -32,10 +32,10 @@ function parseAiJson(content) {
   return JSON.parse(cleaned);
 }
 
-async function generateWithQwen(apiKey, messages) {
+async function generateWithDashScope(apiKey, messages) {
   const failures = [];
 
-  for (const model of QWEN_MODELS) {
+  for (const model of DASHSCOPE_MODELS) {
     const response = await fetch(DASHSCOPE_CHAT_URL, {
       method: 'POST',
       headers: {
@@ -45,15 +45,14 @@ async function generateWithQwen(apiKey, messages) {
       body: JSON.stringify({
         model,
         messages,
-        temperature: 0.7,
-        max_tokens: 300,
+        max_tokens: 500,
       }),
     });
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content?.trim();
     if (response.ok && content) {
-      return { content, model };
+      return { content, model: data.model || model };
     }
 
     failures.push({
@@ -62,7 +61,6 @@ async function generateWithQwen(apiKey, messages) {
       message: response.ok ? '模型未返回内容' : getAiErrorMessage(data),
     });
 
-    // Authentication failures apply to every model, so a fallback cannot help.
     if (response.status === 401) break;
   }
 
@@ -299,7 +297,7 @@ export default {
           ? '你是一位给小学生讲古诗的老师。请用讲故事的口吻，严格按照事情发生的时间先后讲述这首诗的创作背景：先交代诗人当时在哪里和前因，再讲发生了什么，最后讲诗人的心情以及如何写下这首诗。语言简单易懂，控制在80-120字；史实不确定时不要编造具体日期或事件；直接输出正文，不要加任何前缀说明。'
           : '你是一位给小学生讲古诗的老师。请把这首诗的情感关联到小朋友熟悉的日常生活场景（比如夏令营、住校、想爸爸妈妈等），帮助他们体会诗人的心情，语言亲切自然，控制在60-100字，直接输出正文，不要加任何前缀说明。';
 
-        const aiResult = await generateWithQwen(apiKey, [
+        const aiResult = await generateWithDashScope(apiKey, [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `诗名：《${title}》\n作者：${author || '未知'}\n原文：\n${rawText}` },
         ]);
@@ -308,7 +306,7 @@ export default {
           const details = aiResult.failures
             .map(({ model, status, message }) => `${model} (${status}): ${message}`)
             .join('；');
-          return json({ error: `两个千问模型均调用失败：${details}` }, 502);
+          return json({ error: `百炼模型调用失败：${details}` }, 502);
         }
 
         return json({ content: aiResult.content, model: aiResult.model });
@@ -342,7 +340,7 @@ ${poemRawText}
 
 当前句子：${sentenceText}`;
 
-        const aiResult = await generateWithQwen(apiKey, [
+        const aiResult = await generateWithDashScope(apiKey, [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ]);
@@ -351,7 +349,7 @@ ${poemRawText}
           const details = aiResult.failures
             .map(({ model, status, message }) => `${model} (${status}): ${message}`)
             .join('；');
-          return json({ error: `两个千问模型均调用失败：${details}` }, 502);
+          return json({ error: `百炼模型调用失败：${details}` }, 502);
         }
 
         // Parse JSON response
@@ -393,7 +391,7 @@ ${poemRawText}
 输出格式：
 {"words":[{"word":"疑","pinyin":"yí","meaning":"好像，以为"}]}`;
 
-        const aiResult = await generateWithQwen(apiKey, [
+        const aiResult = await generateWithDashScope(apiKey, [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `诗名：《${title}》\n作者：${author || '未知'}\n原文：\n${rawText}` },
         ]);
@@ -402,7 +400,7 @@ ${poemRawText}
           const details = aiResult.failures
             .map(({ model, status, message }) => `${model} (${status}): ${message}`)
             .join('；');
-          return json({ error: `两个千问模型均调用失败：${details}` }, 502);
+          return json({ error: `百炼模型调用失败：${details}` }, 502);
         }
 
         try {
