@@ -17,7 +17,21 @@ const ALLOWED_VIDEO_HOSTS = [
   'youtube.com',
   'youtu.be'
 ];
-const DASHSCOPE_MODELS = ['kimi-k2.7-code', 'qwen3.7-max', 'qwen3.7-max-preview'];
+// Free Model Studio quotas, ordered by the expiry dates shown in the console.
+// Expired models are skipped automatically on every request.
+const AI_FREE_MODELS = [
+  { id: 'glm-5.2', expiresAt: '2026-09-15T23:59:59+08:00' },
+  { id: 'qwen3.7-flash-2026-07-15', expiresAt: '2026-10-23T23:59:59+08:00' },
+  { id: 'qwen3.7-flash', expiresAt: '2026-10-23T23:59:59+08:00' },
+  { id: 'deepseek-v4-flash-0731', expiresAt: '2026-10-31T23:59:59+08:00' },
+  { id: 'qwen3.8-max', expiresAt: '2026-11-01T23:59:59+08:00' },
+  { id: 'qwen3.8-2.4t-a95b', expiresAt: '2026-11-12T23:59:59+08:00' },
+  { id: 'deepseek-v4-pro-0813', expiresAt: '2026-11-13T23:59:59+08:00' },
+  { id: 'qwen3.8-27b', expiresAt: '2026-11-18T23:59:59+08:00' },
+  { id: 'kimi-k3', expiresAt: '2026-11-18T23:59:59+08:00', temperature: 1 },
+  { id: 'qwen3.8-flash', expiresAt: '2026-11-25T23:59:59+08:00' },
+  { id: 'qwen3.8-max-0902', expiresAt: '2026-12-01T23:59:59+08:00' },
+];
 const DASHSCOPE_CHAT_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
 
 function getAiErrorMessage(data) {
@@ -34,8 +48,21 @@ function parseAiJson(content) {
 
 async function generateWithDashScope(apiKey, messages) {
   const failures = [];
+  const activeModels = AI_FREE_MODELS.filter(
+    (candidate) => Date.parse(candidate.expiresAt) >= Date.now()
+  );
 
-  for (const model of DASHSCOPE_MODELS) {
+  if (!activeModels.length) {
+    return {
+      failures: [{
+        model: 'free-model-pool',
+        status: 503,
+        message: '免费模型池已全部到期，请更新模型配置',
+      }],
+    };
+  }
+
+  for (const candidate of activeModels) {
     const response = await fetch(DASHSCOPE_CHAT_URL, {
       method: 'POST',
       headers: {
@@ -43,8 +70,9 @@ async function generateWithDashScope(apiKey, messages) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model,
+        model: candidate.id,
         messages,
+        temperature: candidate.temperature ?? 0.7,
         max_tokens: 500,
       }),
     });
@@ -52,11 +80,11 @@ async function generateWithDashScope(apiKey, messages) {
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content?.trim();
     if (response.ok && content) {
-      return { content, model: data.model || model };
+      return { content, model: data.model || candidate.id };
     }
 
     failures.push({
-      model,
+      model: candidate.id,
       status: response.status,
       message: response.ok ? '模型未返回内容' : getAiErrorMessage(data),
     });
