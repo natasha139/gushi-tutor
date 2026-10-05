@@ -14,3 +14,8 @@ CREATE TABLE poems (
   last_review INTEGER,
   created_at INTEGER DEFAULT (unixepoch())
 );
+
+CREATE TABLE IF NOT EXISTS weekly_plans (
+  week_start TEXT PRIMARY KEY,
+  poem_ids TEXT NOT NULL DEFAULT '[]'
+);

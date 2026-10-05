@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import { validWeek, validPoemIds } from "./weekly-plan.js";
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
@@ -16,6 +18,28 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json());
+
+  const planPath = path.join(process.cwd(), "weekly-plans.json");
+  app.all("/api/weekly-plan", (req, res) => {
+    const week = req.query.week;
+    if (!validWeek(week)) return res.status(400).json({ error: "请选择有效的周一日期" });
+    if (req.method !== "GET" && req.method !== "PUT") return res.sendStatus(405);
+    try {
+      const plans = fs.existsSync(planPath) ? JSON.parse(fs.readFileSync(planPath, "utf8")) : {};
+      if (req.method === "PUT") {
+        const ids = req.body?.poem_ids;
+        if (!validPoemIds(ids)) return res.status(400).json({ error: "诗歌列表无效，最多选择200首" });
+        const existing = new Set(getDbPoems().map(p => p.id));
+        if (ids.some((id: number) => !existing.has(id))) return res.status(400).json({ error: "部分古诗已删除，请刷新后重试" });
+        plans[week as string] = ids;
+        fs.writeFileSync(planPath + ".tmp", JSON.stringify(plans, null, 2));
+        fs.renameSync(planPath + ".tmp", planPath);
+      }
+      return res.json({ week_start: week, poem_ids: plans[week as string] || [] });
+    } catch {
+      return res.status(500).json({ error: "读写每周计划失败，请重试" });
+    }
+  });
 
   // API Route: Get all poems
   app.get("/api/poems", (req, res) => {
@@ -60,7 +84,8 @@ async function startServer() {
         empathy,
         words_json,
         audio_url,
-        video_url
+        video_url,
+        video_urls
       } = req.body;
 
       if (!title || !author || !raw_text) {
@@ -76,7 +101,7 @@ async function startServer() {
         empathy: empathy || "",
         words_json: words_json || [],
         audio_url: audio_url || "",
-        video_url: video_url || ""
+        video_urls: video_urls || (video_url ? [video_url] : [])
       });
 
       res.status(210).json(newPoem);

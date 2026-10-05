@@ -49,7 +49,7 @@ const SEED_POEMS: Poem[] = [
       { word: "霜", pinyin: "shuāng", meaning: "秋天或冬天贴在地面、草叶上的白色冰晶，亮晶晶的、冷冷的。" }
     ],
     audio_url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-    video_url: "https://player.bilibili.com/player.html?bvid=BV19y4y1t7uC",
+    video_urls: ["https://player.bilibili.com/player.html?bvid=BV19y4y1t7uC"],
     mastered: false,
     review_stage: 0,
     last_review: null,
@@ -98,7 +98,7 @@ const SEED_POEMS: Poem[] = [
       { word: "拨", pinyin: "bō", meaning: "划动，拨开。" }
     ],
     audio_url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-    video_url: "https://player.bilibili.com/player.html?bvid=BV1vY411G7W5",
+    video_urls: ["https://player.bilibili.com/player.html?bvid=BV1vY411G7W5"],
     mastered: false,
     review_stage: 0,
     last_review: null,
@@ -149,7 +149,7 @@ const SEED_POEMS: Poem[] = [
       { word: "穷", pinyin: "qióng", meaning: "尽，达到极限。这里是看尽、看透的意思。" }
     ],
     audio_url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
-    video_url: "https://player.bilibili.com/player.html?bvid=BV16b4y1R7g2",
+    video_urls: ["https://player.bilibili.com/player.html?bvid=BV16b4y1R7g2"],
     mastered: false,
     review_stage: 0,
     last_review: null,

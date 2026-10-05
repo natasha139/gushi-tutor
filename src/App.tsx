@@ -1,6 +1,7 @@
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import { Poem } from "./types";
 import PoemList from "./components/PoemList";
+import WeeklyPlan from "./components/WeeklyPlan";
 import { BookOpen, Award, Search, HelpCircle, FileText, Sparkles } from "lucide-react";
 import { API_BASE } from "./apiConfig";
 
@@ -219,6 +220,8 @@ export default function App() {
         ) : (
           <div>
             {view.name === "list" && (
+              <>
+              <WeeklyPlan poems={poems} onLearn={(id) => setView({ name: "learn", id })} onAdd={() => setView({ name: "add" })} />
               <PoemList
                 poems={filteredPoems}
                 onSelectPoem={(id) => setView({ name: "learn", id })}
@@ -227,6 +230,7 @@ export default function App() {
                 onDeletePoem={handleDeletePoem}
                 fontSizeClass={fontSize === "normal" ? "text-base" : fontSize === "large" ? "text-lg" : "text-xl"}
               />
+              </>
             )}
 
             {view.name === "add" && (

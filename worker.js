@@ -1,3 +1,4 @@
+import { WEEKLY_PLAN_SCHEMA, validWeek, validPoemIds } from './weekly-plan.js';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -171,9 +172,28 @@ export default {
     try {
       // GET /api/d1-schema.sql
       if (path === '/api/d1-schema.sql' && method === 'GET') {
-        return new Response(D1_SCHEMA_SQL, {
+        return new Response(D1_SCHEMA_SQL + ';\n' + WEEKLY_PLAN_SCHEMA + ';', {
           headers: { ...CORS_HEADERS, 'Content-Type': 'text/plain' },
         });
+      }
+
+      if (path === '/api/weekly-plan' && (method === 'GET' || method === 'PUT')) {
+        const week = url.searchParams.get('week');
+        if (!validWeek(week)) return json({ error: '请选择有效的周一日期' }, 400);
+        await env.DB.prepare(WEEKLY_PLAN_SCHEMA).run();
+        if (method === 'GET') {
+          const row = await env.DB.prepare('SELECT poem_ids FROM weekly_plans WHERE week_start = ?').bind(week).first();
+          return json({ week_start: week, poem_ids: row ? JSON.parse(row.poem_ids) : [] });
+        }
+        let body;
+        try { body = await request.json(); } catch { return json({ error: '计划格式无效' }, 400); }
+        if (!validPoemIds(body?.poem_ids)) return json({ error: '诗歌列表无效，最多选择200首' }, 400);
+        const { results } = await env.DB.prepare('SELECT id FROM poems').all();
+        const existingIds = new Set(results.map(p => p.id));
+        if (body.poem_ids.some(id => !existingIds.has(id))) return json({ error: '部分古诗已删除，请刷新后重试' }, 400);
+        await env.DB.prepare('INSERT INTO weekly_plans (week_start, poem_ids) VALUES (?, ?) ON CONFLICT(week_start) DO UPDATE SET poem_ids = excluded.poem_ids')
+          .bind(week, JSON.stringify(body.poem_ids)).run();
+        return json({ week_start: week, poem_ids: body.poem_ids });
       }
 
       // GET /api/poems

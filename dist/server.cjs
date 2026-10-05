@@ -22,6 +22,19 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 
 // server.ts
+var import_node_fs = __toESM(require("node:fs"), 1);
+
+// weekly-plan.js
+function validWeek(week) {
+  if (typeof week !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(week)) return false;
+  const date = /* @__PURE__ */ new Date(`${week}T00:00:00Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === week && date.getUTCDay() === 1;
+}
+function validPoemIds(ids) {
+  return Array.isArray(ids) && ids.length <= 200 && ids.every((id) => Number.isSafeInteger(id) && id > 0) && new Set(ids).size === ids.length;
+}
+
+// server.ts
 var import_express = __toESM(require("express"), 1);
 var import_path2 = __toESM(require("path"), 1);
 var import_vite = require("vite");
@@ -74,7 +87,7 @@ var SEED_POEMS = [
       { word: "\u971C", pinyin: "shu\u0101ng", meaning: "\u79CB\u5929\u6216\u51AC\u5929\u8D34\u5728\u5730\u9762\u3001\u8349\u53F6\u4E0A\u7684\u767D\u8272\u51B0\u6676\uFF0C\u4EAE\u6676\u6676\u7684\u3001\u51B7\u51B7\u7684\u3002" }
     ],
     audio_url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-    video_url: "https://player.bilibili.com/player.html?bvid=BV19y4y1t7uC",
+    video_urls: ["https://player.bilibili.com/player.html?bvid=BV19y4y1t7uC"],
     mastered: false,
     review_stage: 0,
     last_review: null,
@@ -124,7 +137,7 @@ var SEED_POEMS = [
       { word: "\u62E8", pinyin: "b\u014D", meaning: "\u5212\u52A8\uFF0C\u62E8\u5F00\u3002" }
     ],
     audio_url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-    video_url: "https://player.bilibili.com/player.html?bvid=BV1vY411G7W5",
+    video_urls: ["https://player.bilibili.com/player.html?bvid=BV1vY411G7W5"],
     mastered: false,
     review_stage: 0,
     last_review: null,
@@ -175,7 +188,7 @@ var SEED_POEMS = [
       { word: "\u7A77", pinyin: "qi\xF3ng", meaning: "\u5C3D\uFF0C\u8FBE\u5230\u6781\u9650\u3002\u8FD9\u91CC\u662F\u770B\u5C3D\u3001\u770B\u900F\u7684\u610F\u601D\u3002" }
     ],
     audio_url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
-    video_url: "https://player.bilibili.com/player.html?bvid=BV16b4y1R7g2",
+    video_urls: ["https://player.bilibili.com/player.html?bvid=BV16b4y1R7g2"],
     mastered: false,
     review_stage: 0,
     last_review: null,
@@ -261,6 +274,27 @@ async function startServer() {
   const app = (0, import_express.default)();
   const PORT = 3e3;
   app.use(import_express.default.json());
+  const planPath = import_path2.default.join(process.cwd(), "weekly-plans.json");
+  app.all("/api/weekly-plan", (req, res) => {
+    const week = req.query.week;
+    if (!validWeek(week)) return res.status(400).json({ error: "\u8BF7\u9009\u62E9\u6709\u6548\u7684\u5468\u4E00\u65E5\u671F" });
+    if (req.method !== "GET" && req.method !== "PUT") return res.sendStatus(405);
+    try {
+      const plans = import_node_fs.default.existsSync(planPath) ? JSON.parse(import_node_fs.default.readFileSync(planPath, "utf8")) : {};
+      if (req.method === "PUT") {
+        const ids = req.body?.poem_ids;
+        if (!validPoemIds(ids)) return res.status(400).json({ error: "\u8BD7\u6B4C\u5217\u8868\u65E0\u6548\uFF0C\u6700\u591A\u9009\u62E9200\u9996" });
+        const existing = new Set(getDbPoems().map((p) => p.id));
+        if (ids.some((id) => !existing.has(id))) return res.status(400).json({ error: "\u90E8\u5206\u53E4\u8BD7\u5DF2\u5220\u9664\uFF0C\u8BF7\u5237\u65B0\u540E\u91CD\u8BD5" });
+        plans[week] = ids;
+        import_node_fs.default.writeFileSync(planPath + ".tmp", JSON.stringify(plans, null, 2));
+        import_node_fs.default.renameSync(planPath + ".tmp", planPath);
+      }
+      return res.json({ week_start: week, poem_ids: plans[week] || [] });
+    } catch {
+      return res.status(500).json({ error: "\u8BFB\u5199\u6BCF\u5468\u8BA1\u5212\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5" });
+    }
+  });
   app.get("/api/poems", (req, res) => {
     try {
       const poems = getDbPoems();
@@ -299,7 +333,8 @@ async function startServer() {
         empathy,
         words_json,
         audio_url,
-        video_url
+        video_url,
+        video_urls
       } = req.body;
       if (!title || !author || !raw_text) {
         return res.status(400).json({ error: "\u8BD7\u540D\u3001\u4F5C\u8005\u3001\u539F\u6587\u4E3A\u5FC5\u586B\u9879" });
@@ -313,7 +348,7 @@ async function startServer() {
         empathy: empathy || "",
         words_json: words_json || [],
         audio_url: audio_url || "",
-        video_url: video_url || ""
+        video_urls: video_urls || (video_url ? [video_url] : [])
       });
       res.status(210).json(newPoem);
     } catch (error) {
