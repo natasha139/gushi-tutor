@@ -54,3 +54,59 @@
 .memory-resource a { color:#465b43; font-size:14px; font-weight:600; white-space:nowrap; padding:10px 12px; border-radius:7px; text-decoration:underline; text-underline-offset:4px; }
 .memory-resource a:hover { background:#e8eade; }
 @media(max-width:640px) { .memory-resource { align-items:flex-start; flex-direction:column; gap:8px; } .memory-resource a { padding-left:0; } }
+
+/* Let grid and flex children shrink to the viewport, including long text. */
+.memory-book, .memory-editor, .memory-practice, .memory-list article, .memory-heading > div { min-width:0; }
+.memory-list h3, .memory-practice h3, .memory-editor h3, .memory-notice, .memory-error { overflow-wrap:anywhere; }
+.memory-lines { grid-template-columns:minmax(0,1fr); }
+.memory-line { min-width:0; max-width:100%; }
+.memory-actions { flex-wrap:wrap; }
+.legacy-tools { margin-bottom:24px; }
+@media(max-width:767px) {
+  .app-header { padding:12px 16px; border-bottom-width:1px; }
+  .app-brand > div:first-child { width:42px; height:42px; border-radius:12px; font-size:26px; flex-shrink:0; }
+  .app-brand h1 { font-size:21px; line-height:1.4; letter-spacing:0; }
+  .app-brand p { font-size:11px; }
+  main { min-width:0; }
+  .memory-book { margin-top:0; }
+  .memory-heading { padding:8px 0 20px; gap:16px; }
+  .memory-heading h2 { font-size:34px; margin-bottom:8px; }
+  .memory-heading p { line-height:1.7; }
+  .memory-heading > button { width:100%; min-height:46px; }
+  .memory-resource { padding:14px 0; margin-bottom:18px; gap:4px; }
+  .memory-resource a { min-height:44px; display:inline-flex; align-items:center; }
+  .memory-summary { display:grid; grid-template-columns:1fr 1fr; gap:12px 24px; padding:16px 20px; margin-bottom:20px; }
+  .memory-summary strong { font-size:28px; }
+  .memory-summary p { grid-column:1 / -1; margin:0; font-size:12px; line-height:1.8; }
+  .memory-toolbar { gap:12px; }
+  .memory-toolbar nav { width:100%; display:grid; grid-template-columns:1fr 1fr; }
+  .memory-toolbar > div { width:100%; display:grid; grid-template-columns:minmax(100px, .8fr) minmax(0, 1.2fr); }
+  .memory-book input, .memory-book textarea, .memory-book select { font-size:16px; min-width:0; width:100%; }
+  .memory-book button { min-height:44px; }
+  .memory-list article { align-items:stretch; flex-direction:column; gap:16px; padding:20px 0; }
+  .memory-list h3 { font-size:19px; line-height:1.6; }
+  .memory-list p { line-height:1.8; }
+  .memory-list .memory-actions { display:grid; grid-template-columns:auto minmax(0,1fr) auto; width:100%; gap:8px; }
+  .memory-editor, .memory-practice { padding:20px 14px; }
+  .memory-editor h3, .memory-practice h3 { font-size:24px; line-height:1.5; }
+  .memory-editor .memory-actions { display:grid; grid-template-columns:1fr 1fr; }
+  .memory-modes { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding-bottom:16px; }
+  .memory-book .memory-line { font-size:24px; line-height:1.9; letter-spacing:.06em; padding:8px 2px; }
+  .memory-lines { gap:12px; padding:20px 0; }
+  .memory-check { width:100%; line-height:1.6; }
+  .memory-feedback { display:grid; grid-template-columns:minmax(0,1fr); }
+  .memory-feedback button { width:100%; }
+  .memory-practice details p { overflow-wrap:anywhere; }
+  .legacy-tools > div { display:flex; flex-direction:column; align-items:stretch; }
+  .legacy-tools .relative { width:100%; }
+  .legacy-poems { min-width:0; }
+  footer > div > div:last-child { flex-wrap:wrap; justify-content:center; }
+}
+@supports(padding:env(safe-area-inset-bottom)) {
+  body { padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right); }
+  footer { padding-bottom:max(24px,env(safe-area-inset-bottom)); }
+}
+
+@media(max-width:767px) {
+  .memory-focused > .memory-heading, .memory-focused > .memory-resource, .memory-focused > .memory-summary { display:none; }
+}

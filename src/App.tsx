@@ -157,12 +157,12 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F5F5F0] text-[#2C2C2C] pb-12 flex flex-col font-sans">
       {/* Dynamic Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b-4 border-[#E5E5DF] py-5 px-4 md:px-8 shadow-sm">
+      <header className="app-header sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b-4 border-[#E5E5DF] py-5 px-4 md:px-8 shadow-sm">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           {/* Logo & Slogan */}
           <div
             onClick={() => setView({ name: "list" })}
-            className="flex items-center gap-3 cursor-pointer group"
+            className="app-brand flex items-center gap-3 cursor-pointer group"
           >
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#5A5A40] to-[#3E3E2D] flex items-center justify-center text-white font-display text-3xl shadow-md group-hover:scale-105 transition-transform">
               记
@@ -177,7 +177,30 @@ export default function App() {
             </div>
           </div>
 
-          {/* Quick Search & Actions only on list view */}
+
+        </div>
+      </header>
+
+      {/* Main body content wrapper */}
+      <main className="flex-grow max-w-7xl w-full mx-auto px-4 md:px-8 mt-6">
+        {error && (
+          <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-xl p-4 text-center text-xs font-medium max-w-md mx-auto my-6">
+            {error}
+          </div>
+        )}
+
+        {view.name === "list" && <MemoryBook poems={poems} />}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 space-y-3">
+            <div className="text-5xl animate-bounce">📖</div>
+            <p className="text-stone-500 text-sm font-bold">正在为小书童准备诗集，请稍等...</p>
+          </div>
+        ) : (
+          <div>
+            {view.name === "list" && (
+              <>
+              <details className="legacy-poems"><summary>古诗学习与每周计划</summary>
+<div className="legacy-tools">          {/* Quick Search & Actions only on list view */}
           {view.name === "list" && (
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               {/* Search input */}
@@ -201,29 +224,7 @@ export default function App() {
                 ✏️ 添加古诗
               </button>
             </div>
-          )}
-        </div>
-      </header>
-
-      {/* Main body content wrapper */}
-      <main className="flex-grow max-w-7xl w-full mx-auto px-4 md:px-8 mt-6">
-        {error && (
-          <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-xl p-4 text-center text-xs font-medium max-w-md mx-auto my-6">
-            {error}
-          </div>
-        )}
-
-        {view.name === "list" && <MemoryBook poems={poems} />}
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-3">
-            <div className="text-5xl animate-bounce">📖</div>
-            <p className="text-stone-500 text-sm font-bold">正在为小书童准备诗集，请稍等...</p>
-          </div>
-        ) : (
-          <div>
-            {view.name === "list" && (
-              <>
-              <details className="legacy-poems"><summary>古诗学习与每周计划</summary>
+          )}</div>
               <WeeklyPlan poems={poems} onLearn={(id) => setView({ name: "learn", id })} onAdd={() => setView({ name: "add" })} />
               <PoemList
                 poems={filteredPoems}

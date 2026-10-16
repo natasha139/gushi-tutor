@@ -94,7 +94,7 @@ export default function MemoryBook({ poems }: { poems: Poem[] }) {
       `${i.title}${i.answer}${i.hint}`.includes(query),
   );
   return (
-    <section className="memory-book" aria-label="背诵本">
+    <section className={`memory-book${form || active ? " memory-focused" : ""}`} aria-label="背诵本">
       <div className="memory-heading">
         <div>
           <span className="memory-eyebrow">每天一点，慢慢记牢</span>
