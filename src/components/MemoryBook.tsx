@@ -109,6 +109,10 @@ export default function MemoryBook({ poems }: { poems: Poem[] }) {
           ＋ 添加背诵内容
         </button>
       </div>
+      <aside className="memory-resource" aria-label="学习资源">
+        <div><strong>学古诗 K12</strong><p>按年级查找古诗词和文言文，拓展阅读与学习。</p></div>
+        <a href="https://k12.xuegushi.com" target="_blank" rel="noopener noreferrer">打开学习网站 ↗<span className="sr-only">（在新标签页打开）</span></a>
+      </aside>
       <div className="memory-summary">
         <div>
           <strong>{fresh.length}</strong>
