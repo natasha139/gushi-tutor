@@ -128,6 +128,10 @@ export default function MemoryBook({ poems }: { poems: Poem[] }) {
           打开学习网站 ↗<span className="sr-only">（在新标签页打开）</span>
         </a>
       </aside>
+      <aside className="memory-resource" aria-label="古文观之快捷链接">
+        <div><strong>古文观之</strong><p>按朝代、作者阅读《古文观止》经典篇目。</p></div>
+        <a href="https://niuniu-869.github.io/guwenguanzhi/" target="_blank" rel="noopener noreferrer">打开古文观之 ↗<span className="sr-only">（在新标签页打开）</span></a>
+      </aside>
       <div className="library-entry">
         <div>
           <strong>古诗文库</strong>
