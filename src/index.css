@@ -110,3 +110,20 @@
 @media(max-width:767px) {
   .memory-focused > .memory-heading, .memory-focused > .memory-resource, .memory-focused > .memory-summary { display:none; }
 }
+
+.library-entry { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 20px; margin-bottom:20px; background:#eef0e7; border-radius:10px; }
+.library-entry p { font-size:13px; color:#777b6d; margin-top:4px; }
+.literature-library { padding:24px; background:#fffef9; border-radius:12px; min-width:0; }
+.literature-library>h3 { font-size:28px; font-family:'Songti SC',serif; margin:20px 0 12px; }
+.literature-library h4 { font-size:20px; font-weight:600; margin-bottom:8px; overflow-wrap:anywhere; }
+.literature-library a { text-decoration:underline; text-underline-offset:3px; }
+.library-preview { margin-top:16px; }
+.library-preview p { white-space:pre-wrap; line-height:1.9; color:#374335; }
+.library-preview a { display:inline-block; margin-top:12px; font-size:13px; }
+@media(max-width:767px) {
+ .library-entry { padding:16px; flex-wrap:wrap; gap:8px; }
+ .memory-focused>.library-entry { display:none; }
+ .literature-library { padding:20px 14px; }
+ .literature-library .memory-toolbar { display:grid; grid-template-columns:minmax(0,1fr); }
+ .literature-library .memory-list .memory-actions { grid-template-columns:1fr 1fr; }
+}

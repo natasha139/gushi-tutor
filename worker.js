@@ -172,6 +172,10 @@ export default {
 
     try {
       if (path === '/api/memory-items' || path.startsWith('/api/memory-items/')) return await memoryApi(request, env.DB, path);
+      if (path === '/api/literature-library' && method === 'GET') {
+        const { results } = await env.DB.prepare('SELECT * FROM literature_library ORDER BY source_path, title').all();
+        return json(results);
+      }
       // GET /api/d1-schema.sql
       if (path === '/api/d1-schema.sql' && method === 'GET') {
         return new Response(D1_SCHEMA_SQL + ';\n' + WEEKLY_PLAN_SCHEMA + ';', {

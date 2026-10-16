@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { API_BASE } from "../apiConfig";
+import LiteratureLibrary, { LibraryEntry } from "./LiteratureLibrary";
 import { Poem } from "../types";
 type Item = {
   id: string;
@@ -31,6 +32,7 @@ export default function MemoryBook({ poems }: { poems: Poem[] }) {
     [title, setTitle] = useState(""),
     [answer, setAnswer] = useState(""),
     [hint, setHint] = useState("");
+  const [showLibrary, setShowLibrary] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [active, setActive] = useState<Item | null>(null),
     [mask, setMask] = useState(0),
@@ -68,6 +70,7 @@ export default function MemoryBook({ poems }: { poems: Poem[] }) {
     }
   }
   function openEditor(item?: Item) {
+    setShowLibrary(false);
     setEditingId(item?.id ?? null);
     setKind(item?.kind ?? "word");
     setTitle(item?.title ?? "");
@@ -94,7 +97,10 @@ export default function MemoryBook({ poems }: { poems: Poem[] }) {
       `${i.title}${i.answer}${i.hint}`.includes(query),
   );
   return (
-    <section className={`memory-book${form || active ? " memory-focused" : ""}`} aria-label="背诵本">
+    <section
+      className={`memory-book${form || active || showLibrary ? " memory-focused" : ""}`}
+      aria-label="背诵本"
+    >
       <div className="memory-heading">
         <div>
           <span className="memory-eyebrow">每天一点，慢慢记牢</span>
@@ -110,9 +116,35 @@ export default function MemoryBook({ poems }: { poems: Poem[] }) {
         </button>
       </div>
       <aside className="memory-resource" aria-label="学习资源">
-        <div><strong>学古诗 K12</strong><p>按年级查找古诗词和文言文，拓展阅读与学习。</p></div>
-        <a href="https://k12.xuegushi.com" target="_blank" rel="noopener noreferrer">打开学习网站 ↗<span className="sr-only">（在新标签页打开）</span></a>
+        <div>
+          <strong>学古诗 K12</strong>
+          <p>按年级查找古诗词和文言文，拓展阅读与学习。</p>
+        </div>
+        <a
+          href="https://k12.xuegushi.com"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          打开学习网站 ↗<span className="sr-only">（在新标签页打开）</span>
+        </a>
       </aside>
+      <div className="library-entry">
+        <div>
+          <strong>古诗文库</strong>
+          <p>SchoolChinese 教材篇目 · 选一篇，加入背诵本。</p>
+        </div>
+        <button
+          onClick={() => {
+            setShowLibrary(true);
+            setForm(false);
+            setActive(null);
+            setError("");
+            setNotice("");
+          }}
+        >
+          选篇背诵 →
+        </button>
+      </div>
       <div className="memory-summary">
         <div>
           <strong>{fresh.length}</strong>
@@ -137,7 +169,37 @@ export default function MemoryBook({ poems }: { poems: Poem[] }) {
           {notice}
         </p>
       )}
-      {form ? (
+      {showLibrary ? (
+        <LiteratureLibrary
+          onClose={() => setShowLibrary(false)}
+          onChoose={(entry: LibraryEntry) => {
+            const existing = items.find(
+              (i) => i.title === entry.title && i.answer === entry.body,
+            );
+            if (existing) {
+              setShowLibrary(false);
+              setTab("all");
+              setQuery(entry.title);
+              setFilter("all");
+              setNotice("这篇内容已在背诵本中，可以直接开始练习。");
+              return;
+            }
+            openEditor();
+            setKind(entry.kind);
+            setTitle(entry.title);
+            setAnswer(entry.body);
+            setHint(
+              [
+                entry.author,
+                entry.edition + " · " + entry.grade,
+                "来源：" + entry.source_url,
+              ]
+                .filter(Boolean)
+                .join("\n"),
+            );
+          }}
+        />
+      ) : form ? (
         <form
           className="memory-editor"
           onSubmit={(e) => {
