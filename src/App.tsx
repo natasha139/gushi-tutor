@@ -1,6 +1,7 @@
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import { Poem } from "./types";
 import PoemList from "./components/PoemList";
+import MemoryBook from "./components/MemoryBook";
 import WeeklyPlan from "./components/WeeklyPlan";
 import { BookOpen, Award, Search, HelpCircle, FileText, Sparkles } from "lucide-react";
 import { API_BASE } from "./apiConfig";
@@ -164,14 +165,14 @@ export default function App() {
             className="flex items-center gap-3 cursor-pointer group"
           >
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#5A5A40] to-[#3E3E2D] flex items-center justify-center text-white font-display text-3xl shadow-md group-hover:scale-105 transition-transform">
-              诗
+              记
             </div>
             <div>
               <h1 className="text-2xl md:text-3xl font-black font-serif text-[#5A5A40] tracking-wide">
-                古诗伴读 · 乐学版
+                小书童 · 背诵本
               </h1>
               <p className="text-xs md:text-sm text-[#5A5A40]/85 font-bold font-serif">
-                书山有路勤为径 · 艾宾浩斯智能记忆
+                生词 · 成语 · 古诗 · 小古文
               </p>
             </div>
           </div>
@@ -212,6 +213,7 @@ export default function App() {
           </div>
         )}
 
+        {view.name === "list" && <MemoryBook poems={poems} />}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
             <div className="text-5xl animate-bounce">📖</div>
@@ -221,6 +223,7 @@ export default function App() {
           <div>
             {view.name === "list" && (
               <>
+              <details className="legacy-poems"><summary>古诗学习与每周计划</summary>
               <WeeklyPlan poems={poems} onLearn={(id) => setView({ name: "learn", id })} onAdd={() => setView({ name: "add" })} />
               <PoemList
                 poems={filteredPoems}
@@ -230,6 +233,7 @@ export default function App() {
                 onDeletePoem={handleDeletePoem}
                 fontSizeClass={fontSize === "normal" ? "text-base" : fontSize === "large" ? "text-lg" : "text-xl"}
               />
+              </details>
               </>
             )}
 
@@ -273,10 +277,10 @@ export default function App() {
       <footer className="border-t-4 border-[#E5E5DF] mt-12 py-6 text-center text-xs text-stone-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-3">
           <div className="font-bold">
-            © 2026 小学古诗词学习助手. 专为小学生量身定制的诗歌背诵工具.
+            © 2026 小书童背诵本 · 把每天学过的，慢慢记牢。
           </div>
           <div className="flex gap-4">
-            <span className="text-[#5A5A40] font-bold">🌱 艾宾浩斯复习：科学背诵，永不遗忘</span>
+            <span className="text-[#5A5A40] font-bold">间隔复习 · 主动回忆</span>
             <span className="text-stone-400">|</span>
             <span className="text-[#5A5A40] font-bold">📖 无广告 · 纯净阅读</span>
           </div>

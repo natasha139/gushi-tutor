@@ -1,3 +1,4 @@
+import { memoryApi } from './memory.js';
 import { WEEKLY_PLAN_SCHEMA, validWeek, validPoemIds } from './weekly-plan.js';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -170,6 +171,7 @@ export default {
     }
 
     try {
+      if (path === '/api/memory-items' || path.startsWith('/api/memory-items/')) return await memoryApi(request, env.DB, path);
       // GET /api/d1-schema.sql
       if (path === '/api/d1-schema.sql' && method === 'GET') {
         return new Response(D1_SCHEMA_SQL + ';\n' + WEEKLY_PLAN_SCHEMA + ';', {
