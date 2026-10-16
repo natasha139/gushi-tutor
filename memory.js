@@ -86,6 +86,29 @@ export async function memoryApi(request, db, path) {
       .bind(match[1])
       .first();
     if (!item) return reply({ error: "这条内容已不存在，请刷新" }, 404);
+    if (!match[2] && request.method === "PUT") {
+      let body;
+      try {
+        body = await request.json();
+      } catch {
+        return reply({ error: "内容格式无效" }, 400);
+      }
+      if (!validItem(body))
+        return reply({ error: "请填写类型、标题和正文，并检查长度" }, 400);
+      await db
+        .prepare(
+          "UPDATE memory_items SET kind = ?, title = ?, answer = ?, hint = ? WHERE id = ?",
+        )
+        .bind(
+          body.kind,
+          body.title.trim(),
+          body.answer.trim(),
+          body.hint.trim(),
+          item.id,
+        )
+        .run();
+      return reply({ ok: true });
+    }
     if (match[2] && request.method === "POST") {
       let body;
       try {

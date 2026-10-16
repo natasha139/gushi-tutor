@@ -31,6 +31,7 @@ export default function MemoryBook({ poems }: { poems: Poem[] }) {
     [title, setTitle] = useState(""),
     [answer, setAnswer] = useState(""),
     [hint, setHint] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [active, setActive] = useState<Item | null>(null),
     [mask, setMask] = useState(0),
     [revealed, setRevealed] = useState<number[]>([]),
@@ -66,6 +67,17 @@ export default function MemoryBook({ poems }: { poems: Poem[] }) {
       setBusy(false);
     }
   }
+  function openEditor(item?: Item) {
+    setEditingId(item?.id ?? null);
+    setKind(item?.kind ?? "word");
+    setTitle(item?.title ?? "");
+    setAnswer(item?.answer ?? "");
+    setHint(item?.hint ?? "");
+    setActive(null);
+    setNotice("");
+    setError("");
+    setForm(true);
+  }
   function start(item: Item) {
     setActive(item);
     setMask(0);
@@ -91,11 +103,8 @@ export default function MemoryBook({ poems }: { poems: Poem[] }) {
         </div>
         <button
           className="memory-primary"
-          onClick={() => {
-            setForm(true);
-            setActive(null);
-            setNotice("");
-          }}
+          disabled={busy}
+          onClick={() => openEditor()}
         >
           ＋ 添加背诵内容
         </button>
@@ -130,8 +139,8 @@ export default function MemoryBook({ poems }: { poems: Poem[] }) {
           onSubmit={(e) => {
             e.preventDefault();
             perform(async () => {
-              await api("", {
-                method: "POST",
+              await api(editingId ? `/${editingId}` : "", {
+                method: editingId ? "PUT" : "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ kind, title, answer, hint }),
               });
@@ -140,11 +149,21 @@ export default function MemoryBook({ poems }: { poems: Poem[] }) {
               setTitle("");
               setAnswer("");
               setHint("");
-              setNotice("已加入背诵本，可以开始练习了。");
+              setNotice(
+                editingId
+                  ? "修改已保存，复习进度保持不变。"
+                  : "已加入背诵本，可以开始练习了。",
+              );
+              setEditingId(null);
             });
           }}
         >
-          <h3>把今天要背的内容放进来</h3>
+          <h3>{editingId ? "修改背诵内容" : "把今天要背的内容放进来"}</h3>
+          {editingId && (
+            <p className="memory-help">
+              修改后保留当前复习进度和下次复习时间。
+            </p>
+          )}
           <label>
             内容类型
             <select value={kind} onChange={(e) => setKind(e.target.value)}>
@@ -220,7 +239,7 @@ export default function MemoryBook({ poems }: { poems: Poem[] }) {
               取消
             </button>
             <button className="memory-primary" disabled={busy}>
-              {busy ? "保存中…" : "保存到背诵本"}
+              {busy ? "保存中…" : editingId ? "保存修改" : "保存到背诵本"}
             </button>
           </div>
         </form>
@@ -387,7 +406,7 @@ export default function MemoryBook({ poems }: { poems: Poem[] }) {
                   ? "到期内容会出现在这里，也可以去全部内容提前练习。"
                   : "添加生词、成语、古诗或小古文，保存后就能遮挡练习。"}
               </p>
-              <button onClick={() => setForm(true)}>＋ 添加内容</button>
+              <button onClick={() => openEditor()}>＋ 添加内容</button>
             </div>
           ) : (
             <div className="memory-list">
@@ -406,6 +425,13 @@ export default function MemoryBook({ poems }: { poems: Poem[] }) {
                     <p>{item.answer.slice(0, 80)}</p>
                   </div>
                   <div className="memory-actions">
+                    <button
+                      disabled={busy}
+                      aria-label={`修改${item.title}`}
+                      onClick={() => openEditor(item)}
+                    >
+                      修改
+                    </button>
                     <button
                       className="memory-primary"
                       onClick={() => start(item)}
