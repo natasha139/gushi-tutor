@@ -34,3 +34,7 @@ View your app in AI Studio: https://ai.studio/apps/63f1ca8a-b1f0-4d87-baff-c5e30
 来源：https://github.com/lanhin/SchoolChinese ，固定版本 a04ff03403e963bb84e07bc3eb04b9faf26d6d7c，MIT 许可（Copyright 2018 lanhin，见 public/licenses/SchoolChinese-MIT.txt）。数据保留上游原文、作者、教材版本、册次及具体篇目链接。合集按二级标题拆篇；按标题、作者和正文生成稳定 ID，重复运行导入不会覆盖现有记录。保留上游文字，不自动纠正异体字或版本差异；类型基于段落长度初分，可在加入背诵本前修改。
 
 从上游本地 checkout 重建：`python3 scripts/import-schoolchinese.py /path/to/SchoolChinese`。导入：`npx wrangler d1 execute gushi-tutor-db --remote --file data/schoolchinese.sql`。古诗文库与个人背诵记录独立，不向今日任务批量加入内容，也不修改原诗库及复习记录。
+
+## 正文字号
+
+顶部提供标准（24px）、大字（36px）、电视（48px）三档，默认电视档，适合约两米距离观看。选择保存在当前浏览器中，刷新后保留。背诵正文、列表摘要、文章预览、提示及古诗译文解析使用统一字号；导航和按钮保持原大小。

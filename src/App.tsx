@@ -22,7 +22,17 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
 
   // Font size state
-  const [fontSize, setFontSize] = useState<"normal" | "large" | "huge">("normal");
+  const [fontSize, setFontSize] = useState<"normal" | "large" | "huge">(() => {
+    try {
+      const saved = localStorage.getItem("gushi-reading-size");
+      if (saved === "normal" || saved === "large" || saved === "huge") return saved;
+    } catch { /* Reading remains available when storage is disabled. */ }
+    return "huge";
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem("gushi-reading-size", fontSize); } catch { /* Optional persistence. */ }
+  }, [fontSize]);;
 
   // Fetch all poems from Express API
   const fetchPoems = async (showLoading = true) => {
@@ -155,7 +165,7 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F5F5F0] text-[#2C2C2C] pb-12 flex flex-col font-sans">
+    <div data-reading-size={fontSize} className="min-h-screen bg-[#F5F5F0] text-[#2C2C2C] pb-12 flex flex-col font-sans">
       {/* Dynamic Header */}
       <header className="app-header sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b-4 border-[#E5E5DF] py-5 px-4 md:px-8 shadow-sm">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -177,7 +187,13 @@ export default function App() {
             </div>
           </div>
 
-
+          <fieldset className="reading-size-control">
+            <legend className="sr-only">正文字号</legend>
+            <span aria-hidden="true">正文字号</span>
+            {([ ["normal", "标准"], ["large", "大字"], ["huge", "电视"] ] as const).map(([size, label]) => (
+              <button key={size} type="button" aria-pressed={fontSize === size} onClick={() => setFontSize(size)}>{label}</button>
+            ))}
+          </fieldset>
         </div>
       </header>
 
@@ -265,8 +281,6 @@ export default function App() {
                   onBack={() => setView({ name: "list" })}
                   onMarkMastered={handleMarkMastered}
                   onPoemUpdated={() => fetchPoems(false)}
-                  fontSize={fontSize}
-                  setFontSize={setFontSize}
                 />
               </Suspense>
             )}

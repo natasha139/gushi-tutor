@@ -127,3 +127,25 @@
  .literature-library .memory-toolbar { display:grid; grid-template-columns:minmax(0,1fr); }
  .literature-library .memory-list .memory-actions { grid-template-columns:1fr 1fr; }
 }
+
+/* Shared reading sizes stay consistent across practice, previews and explanations. */
+[data-reading-size] { --reading-size:24px; }
+[data-reading-size="large"] { --reading-size:36px; }
+[data-reading-size="huge"] { --reading-size:48px; }
+.reading-size-control { display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-size:14px; }
+.reading-size-control > span { margin-right:6px; }
+.reading-size-control button { padding:8px 14px; border:1px solid #c8d0bc; border-radius:8px; cursor:pointer; }
+.reading-size-control button[aria-pressed="true"] { background:#465b43; color:white; }
+.reading-size-control button:focus-visible { outline:3px solid #859973; outline-offset:3px; }
+[data-reading-size] .reading-text,
+[data-reading-size] .memory-book .memory-line,
+[data-reading-size] .library-preview p,
+[data-reading-size] .memory-practice details p,
+[data-reading-size] .memory-list article > div > p {
+  font-size:var(--reading-size); line-height:1.8; letter-spacing:.04em;
+  overflow-wrap:anywhere; white-space:pre-wrap; min-width:0; max-width:100%;
+}
+.poem-detail .flex-1 { min-width:0; }
+[data-reading-size="huge"] .poem-detail .grid-cols-1 { grid-template-columns:minmax(0,1fr); }
+[data-reading-size="huge"] .poem-detail .max-w-lg,
+[data-reading-size="huge"] .poem-detail .max-w-xl { max-width:100%; width:100%; }

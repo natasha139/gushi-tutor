@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { Poem } from "../types";
-import { ArrowLeft, BookOpen, Brain, Play, Sparkles, MessageCircle, Volume2, Type, HelpCircle, CheckCircle, Info, Loader2 } from "lucide-react";
+import { ArrowLeft, BookOpen, Brain, Play, Sparkles, MessageCircle, Volume2, HelpCircle, CheckCircle, Info, Loader2 } from "lucide-react";
 import { API_BASE } from "../apiConfig";
 
 interface PoemDetailProps {
@@ -8,8 +8,6 @@ interface PoemDetailProps {
   onBack: () => void;
   onMarkMastered: (id: number) => void;
   onPoemUpdated: () => void;
-  fontSize: "normal" | "large" | "huge";
-  setFontSize: (size: "normal" | "large" | "huge") => void;
 }
 
 export default function PoemDetail({
@@ -17,8 +15,6 @@ export default function PoemDetail({
   onBack,
   onMarkMastered,
   onPoemUpdated,
-  fontSize,
-  setFontSize
 }: PoemDetailProps) {
   const [activeTab, setActiveTab] = useState<"tab1" | "tab2" | "tab3" | "tab4">("tab1");
   const [challengeStage, setChallengeStage] = useState<number>(0); // 0=正常, 1=遮前2字, 2=遮后半句, 3=仅首字, 4=全遮
@@ -26,23 +22,8 @@ export default function PoemDetail({
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
 
-  // Determine font size CSS class
-  const getFontSizeClass = (element: "title" | "body" | "poem") => {
-    if (fontSize === "huge") {
-      if (element === "title") return "text-3xl md:text-4xl";
-      if (element === "poem") return "text-2xl md:text-3xl leading-loose tracking-widest";
-      return "text-xl md:text-2xl leading-relaxed";
-    }
-    if (fontSize === "large") {
-      if (element === "title") return "text-2xl md:text-3xl";
-      if (element === "poem") return "text-xl md:text-2xl leading-relaxed tracking-wider";
-      return "text-lg md:text-xl leading-relaxed";
-    }
-    // Normal / default
-    if (element === "title") return "text-xl md:text-2xl";
-    if (element === "poem") return "text-lg md:text-xl leading-relaxed tracking-normal";
-    return "text-base md:text-lg leading-relaxed";
-  };
+  const getFontSizeClass = (element: "title" | "body" | "poem") =>
+    element === "title" ? "text-2xl md:text-3xl" : "reading-text";
 
   // Call backend AI proxy to generate pinyin/translation/scene/mood for one sentence
   const handleGenerateSentence = async (sentenceIndex: number) => {
@@ -200,7 +181,7 @@ export default function PoemDetail({
   };
 
   return (
-    <div className="bg-white border border-[#E5E5DF] rounded-2xl overflow-hidden shadow-sm max-w-4xl mx-auto flex flex-col">
+    <div className="poem-detail bg-white border border-[#E5E5DF] rounded-2xl overflow-hidden shadow-sm max-w-4xl mx-auto flex flex-col">
       {/* Top Header Controls */}
       <div className="bg-[#FDFBF7] border-b border-[#E5E5DF] p-4 md:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -219,34 +200,7 @@ export default function PoemDetail({
           </div>
         </div>
 
-        {/* Global accessible sizing controls */}
-        <div className="flex items-center gap-2 bg-stone-200/60 p-1 rounded-xl self-start sm:self-auto">
-          <Type size={14} className="text-stone-600 ml-2" />
-          <button
-            onClick={() => setFontSize("normal")}
-            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${
-              fontSize === "normal" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600 hover:text-stone-950"
-            }`}
-          >
-            中
-          </button>
-          <button
-            onClick={() => setFontSize("large")}
-            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${
-              fontSize === "large" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600 hover:text-stone-950"
-            }`}
-          >
-            大
-          </button>
-          <button
-            onClick={() => setFontSize("huge")}
-            className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${
-              fontSize === "huge" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600 hover:text-stone-950"
-            }`}
-          >
-            特大
-          </button>
-        </div>
+
       </div>
 
       {/* 4 Tabs Selector */}
@@ -476,7 +430,7 @@ export default function PoemDetail({
                           <span className="text-xs font-bold text-[#5A5A40] block font-sans tracking-wide">
                             [{sent.pinyin || "未配音标"}]
                           </span>
-                          <h5 className="text-xl font-bold font-serif text-stone-950 mt-0.5">
+                          <h5 className="reading-text font-bold font-serif text-stone-950 mt-0.5">
                             {sent.text}
                           </h5>
                         </div>
