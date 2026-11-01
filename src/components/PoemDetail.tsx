@@ -562,9 +562,11 @@ export default function PoemDetail({
                     </div>
                   ))
                 ) : (
-                  <div className={getFontSizeClass("poem")}>
-                    {poem.raw_text}
-                  </div>
+                  (poem.raw_text.match(/[^，。！？?!；、\n]+[，。！？?!；、]?/gu) || []).map((line, index) => (
+                    <div key={index} className={getFontSizeClass("poem")}>
+                      {renderOccludedSentence(line.trim())}
+                    </div>
+                  ))
                 )}
               </div>
 
